@@ -1,4 +1,4 @@
-/* ===== 英莱达物管系统 · 模拟演示数据 ===== */
+/* ===== 区域产业管理系统 · 模拟演示数据 ===== */
 window.DB = (function(){
   // 确定性伪随机
   let seed = 42;
@@ -313,7 +313,7 @@ window.DB = (function(){
   const invoices = [];
   bills.filter(b=>b.status==='已缴').slice(0,12).forEach((b,i)=>{
     invoices.push({id:'FP'+String(8000+i), bill:b.id, tenant:b.tname, type:b.type,
-      amount:b.amount, title: pick([b.tname, b.tname, '英莱达园区企业（企业抬头）']),
+      amount:b.amount, title: pick([b.tname, b.tname, '园区企业（企业抬头）']),
       taxno: i%3===0? '91330100XXXXXXXX2X' : null,
       kind: i%3===0? '增值税专用发票' : '增值税普通发票（电子）',
       apply:'2026-07-'+String(ri(5,28)).padStart(2,'0'),

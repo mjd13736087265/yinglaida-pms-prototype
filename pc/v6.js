@@ -231,13 +231,13 @@ PC.tplPreview = function(cat){
   modal({title:'模板预览（变量已带入示例数据）', size:'lg', body:`
     <div style="border:1px solid var(--line);border-radius:10px;padding:26px 30px;background:#fff;font-size:13.5px;line-height:2.2">
       <div style="text-align:center;font-size:17px;font-weight:700;letter-spacing:4px;margin-bottom:14px">${t.cat}租赁合同</div>
-      合同编号：HT20260801<br>出租方（甲方）：英莱达产业发展有限公司<br>承租方（乙方）：杭州恒力机械有限公司<br><br>
+      合同编号：HT20260801<br>出租方（甲方）：区域产业发展有限公司<br>承租方（乙方）：杭州恒力机械有限公司<br><br>
       第一条　甲方将 <b>3 号标准厂房 102</b> 出租给 <b>杭州恒力机械有限公司</b> 使用，租期 <b>2026-08-01 至 2027-07-31</b>。<br>
       第二条　租金 <b>33,600</b> 元/月，押金 <b>36,000</b> 元。<br>
       第三条　免租期约定：<b>装修期 2 个月（2026-08-01 ~ 2026-09-30）</b>，免租期内仅计收水电费用。<br>
       第四条　水电费按智能表计实际用量结算，公摊按分摊规则计收。<br>
       第五条　本合同采用电子签章，与纸质合同具有同等法律效力。<br><br>
-      <div style="display:flex;justify-content:space-between;color:var(--ink3)"><span>甲方（电子签章）：英莱达产业发展有限公司</span><span>乙方（签名）：＊已实名签署＊</span></div>
+      <div style="display:flex;justify-content:space-between;color:var(--ink3)"><span>甲方（电子签章）：区域产业发展有限公司</span><span>乙方（签名）：＊已实名签署＊</span></div>
     </div>`,
     footer:`<button class="btn" onclick="UI.close()">关闭</button><button class="btn pri" onclick="UI.close();UI.toast('已生成样例 PDF')">导出样例 PDF</button>`});
 };
@@ -324,10 +324,10 @@ PC.reg('/sys/flow','审批对接', (el)=>{
   <div class="row">
     <div class="card"><h3>OA 对接配置</h3>
       ${desc([
-        ['OA 系统地址','<code>https://oa.yinglaida.cn/api</code>'],
+        ['OA 系统地址','<code>https://oa.example.cn/api</code>'],
         ['对接方式','Webhook 推送 + 审批结果回调'],
         ['AppKey','<code>yld-pms-8f3a21</code>（已配置）'],
-        ['回调地址','<code>https://pms.yinglaida.cn/api/oa/callback</code>'],
+        ['回调地址','<code>https://pms.example.cn/api/oa/callback</code>'],
         ['连通状态',badge('已联通 · 今日推送 3 次全部成功','green')],
         ['签名验签','HMAC-SHA256 双向验签']
       ],2)}

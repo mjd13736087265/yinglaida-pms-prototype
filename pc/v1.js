@@ -172,7 +172,7 @@ PC.dun = function(id){
     ${fld('催收对象', `<input class="ipt" value="${r.tenant}（${r.room}）" disabled>`)}
     ${fld('欠费金额', `<input class="ipt" value="¥${money(r.balance)}（逾期 ${r.days} 天）" disabled>`)}
     ${fld('催收方式', `<select class="ipt"><option>微信模板消息推送</option><option>短信提醒</option><option>电话催收（生成跟进任务）</option><option>催缴函件（生成 PDF）</option></select>`, true)}
-    ${fld('催收内容', `<textarea class="ipt" rows="3">【英莱达】尊敬的${r.tenant}，您在${r.room}的${r.type} ¥${money(r.balance)} 已逾期 ${r.days} 天，请尽快登录小程序完成缴费，逾期将影响续租及信用。</textarea>`, true)}
+    ${fld('催收内容', `<textarea class="ipt" rows="3">【区域产业】尊敬的${r.tenant}，您在${r.room}的${r.type} ¥${money(r.balance)} 已逾期 ${r.days} 天，请尽快登录小程序完成缴费，逾期将影响续租及信用。</textarea>`, true)}
   </div>`, footer:`<button class="btn" onclick="UI.close()">取消</button><button class="btn pri" onclick="UI.close();UI.toast('催收消息已发送')">立即发送</button>`});
 };
 PC.tenant = function(name){
@@ -213,7 +213,7 @@ PC.contract = function(id){
       五、本合同采用电子签章，与纸质合同具有同等法律效力。
     </div>
     <h3 style="margin:18px 0 10px;font-size:14px">签署记录</h3>
-    ${timeline([{t:'合同创建', d:'系统根据入住办理自动生成', act:true},{t:'租客电子签名', d:c.start+' 10:2'+(id.charCodeAt(3)%10)+' · 实名认证通过', act:true},{t:'企业签章', d:'英莱达产业发展有限公司 · CA 证书签章', act:true},{t:'合同生效', d:'租金账单自动生成任务已创建', act:true}])}
+    ${timeline([{t:'合同创建', d:'系统根据入住办理自动生成', act:true},{t:'租客电子签名', d:c.start+' 10:2'+(id.charCodeAt(3)%10)+' · 实名认证通过', act:true},{t:'企业签章', d:'区域产业发展有限公司 · CA 证书签章', act:true},{t:'合同生效', d:'租金账单自动生成任务已创建', act:true}])}
   `);
 };
 PC.order = function(id){

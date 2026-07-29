@@ -1,8 +1,8 @@
 {
-  "name": "yinglaida-pms-prototype",
+  "name": "quyu-pms-prototype",
   "private": true,
   "version": "1.0.0",
-  "description": "英莱达区域产业管理系统 - 高保真可点击原型",
+  "description": "区域产业管理系统 - 高保真可点击原型",
   "scripts": {
     "dev": "vite --host 0.0.0.0"
   },

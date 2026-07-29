@@ -79,11 +79,11 @@ contract(id){
     <div style="font-size:12px;color:var(--ink3)">${c.id} · 电子签章已生效</div>
   </div>
   <div class="mcard">
-    ${[['出租方','英莱达产业发展有限公司'],['承租方',c.tname],['租赁标的',c.roomName],['租赁期限',c.start+' ~ '+c.end],['租金标准','¥'+money(c.rent)+' '+c.unit],['付款周期',c.cycle],['押金','¥'+money(c.deposit)],['签署日期',c.start]].map(([k,v])=>
+    ${[['出租方','区域产业发展有限公司'],['承租方',c.tname],['租赁标的',c.roomName],['租赁期限',c.start+' ~ '+c.end],['租金标准','¥'+money(c.rent)+' '+c.unit],['付款周期',c.cycle],['押金','¥'+money(c.deposit)],['签署日期',c.start]].map(([k,v])=>
       `<div class="mrow" style="cursor:default"><div class="tx"><div class="ts">${k}</div></div><div style="font-size:13.5px;text-align:right;max-width:60%">${v}</div></div>`).join('')}
   </div>
   <div class="mcard"><h4>签署存证</h4>
-    ${timeline([{t:'租客实名签署',d:c.start+' · 人脸识别通过',act:true},{t:'企业 CA 签章',d:'英莱达产业发展有限公司',act:true},{t:'区块链存证',d:'哈希 8f3a…d21b 已上链',act:true}])}
+    ${timeline([{t:'租客实名签署',d:c.start+' · 人脸识别通过',act:true},{t:'企业 CA 签章',d:'区域产业发展有限公司',act:true},{t:'区块链存证',d:'哈希 8f3a…d21b 已上链',act:true}])}
   </div>
   <div style="padding:12px"><button class="mbtn" onclick="UI.toast('合同 PDF 下载中')">下载合同 PDF</button></div>`;
 },
@@ -405,7 +405,7 @@ keeper(){
 },
 notice(t){
   body().innerHTML = navBar('公告详情') + `<div class="mcard"><h4>${t}</h4>
-  <div style="font-size:12px;color:var(--ink3);margin-bottom:10px">英莱达物业服务中心 · 2026-07-27</div>
+  <div style="font-size:12px;color:var(--ink3);margin-bottom:10px">区域产业物业服务中心 · 2026-07-27</div>
   <div style="font-size:13.5px;line-height:2.1;color:var(--ink2)">尊敬的租户：<br>　　为提升园区服务质量，现将相关事项通知如下，请知悉并相互转告。由此带来的不便敬请谅解，如有疑问请联系您的专属管家。<br><br>　　特此通知。</div></div>`;
 },
 
@@ -435,7 +435,7 @@ me(){
     <div class="mrow" onclick="${t==='押金查询'?`MP.push('deposit')`:`MP.push('setting','${t}')`}"><div class="ic" style="background:#f1f3f9">${i}</div><div class="tx"><div class="tt">${t}</div><div class="ts">${s}</div></div><span class="ar">›</span></div>`).join('')}
   </div>
   <div style="padding:12px"><button class="mbtn gray" onclick="UI.toast('已退出登录（演示）')">退出登录</button></div>
-  <div style="text-align:center;font-size:11px;color:var(--ink3);padding:8px 0 20px">英莱达智慧园区 v1.0.0</div>`;
+  <div style="text-align:center;font-size:11px;color:var(--ink3);padding:8px 0 20px">区域产业智慧园区 v1.0.0</div>`;
 },
 setting(t){
   body().innerHTML = navBar(t) + ({

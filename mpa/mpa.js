@@ -220,7 +220,7 @@ dun(){
   <div class="mcard">
     <div class="fld"><label>选择欠费租户</label><select class="ipt">${DB.receivables.filter(r=>r.status==='逾期').slice(0,5).map(r=>`<option>${r.tenant}（欠 ¥${money(r.balance)}）</option>`).join('')}</select></div>
     <div class="fld" style="margin-top:12px"><label>催缴方式</label><div>${['微信模板消息','短信','都发送'].map((t,i)=>`<span class="chip ${i===2?'on':''}" onclick="this.parentNode.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${t}</span>`).join('')}</div></div>
-    <div class="fld" style="margin-top:12px"><label>催缴内容</label><textarea class="ipt" rows="3">【英莱达】您有账单已逾期，请尽快登录小程序缴纳，逾期将影响续租与门禁使用。</textarea></div>
+    <div class="fld" style="margin-top:12px"><label>催缴内容</label><textarea class="ipt" rows="3">【区域产业】您有账单已逾期，请尽快登录小程序缴纳，逾期将影响续租与信用评价。</textarea></div>
   </div>
   <div style="padding:12px"><button class="mbtn" onclick="UI.toast('催缴已发送，结果可在催收记录查看');MA.back()">立即发送</button></div>`;
 },

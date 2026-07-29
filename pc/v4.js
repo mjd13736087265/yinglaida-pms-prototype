@@ -159,7 +159,7 @@ PC.batchDun = function(){
   modal({title:'一键批量催缴', body:`<div class="frm">
     ${fld('催缴范围', `<select class="ipt"><option>全部逾期租户（${new Set(DB.receivables.filter(r=>r.status==='逾期').map(r=>r.tenant)).size} 户）</option><option>逾期 30 天以上</option><option>逾期 60 天以上</option></select>`, true)}
     ${fld('触达渠道', `<select class="ipt"><option>微信模板消息 + 短信兜底</option><option>仅微信</option><option>仅短信</option></select>`, true)}
-    ${fld('催缴文案', `<textarea class="ipt" rows="3">【英莱达】您有账单已逾期，合计金额请登录小程序查看并尽快缴纳。逾期将影响续租、门禁与信用评价。详询 0571-88888888。</textarea>`, true)}
+    ${fld('催缴文案', `<textarea class="ipt" rows="3">【区域产业】您有账单已逾期，合计金额请登录小程序查看并尽快缴纳。逾期将影响续租与信用评价。详询 0571-88888888。</textarea>`, true)}
   </div>`, footer:`<button class="btn" onclick="UI.close()">取消</button><button class="btn pri" onclick="UI.close();UI.toast('批量催缴已发送，触达率可在报表中查看')">立即发送</button>`});
 };
 PC.collectLog = function(id){
@@ -471,7 +471,7 @@ PC.invoiceNew = function(){
 };
 PC.invoiceSetting = function(){
   modal({title:'开票设置', size:'lg', body:`<div class="frm">
-    ${fld('开票主体', `<input class="ipt" value="英莱达产业发展有限公司">`, true)}
+    ${fld('开票主体', `<input class="ipt" value="区域产业发展有限公司">`, true)}
     ${fld('税号', `<input class="ipt" value="91330100MA2XXXXXX8">`)}
     ${fld('开票平台', `<select class="ipt"><option>百望云（已对接）</option><option>航天信息</option><option>税务 UKey 手工开具</option></select>`)}
     ${fld('自动交付', `<select class="ipt"><option>开具后自动发送邮箱+小程序</option><option>仅小程序</option></select>`)}

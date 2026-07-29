@@ -84,7 +84,7 @@ window.UI = (function(){
     s+=`<text x="${cx}" y="${cy-4}" font-size="20" font-weight="700" text-anchor="middle" fill="#1f2937">${opt.center||total}</text><text x="${cx}" y="${cy+15}" font-size="10.5" text-anchor="middle" fill="#9aa1b0">${opt.centerLabel||''}</text></svg>`;
     let lg='<div style="display:flex;flex-direction:column;gap:7px;justify-content:center">';
     data.forEach((d,i)=>{lg+=`<div style="font-size:12.5px;color:#4b5563"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${d.c||PALETTE[i%PALETTE.length]};margin-right:7px"></i>${d.l} <b style="float:right;margin-left:18px">${d.v}${opt.unit||''}</b></div>`;});
-    return `<div style="display:flex;gap:22px;align-items:center">${s}${lg}</div>`;
+    return `<div style="display:flex;gap:22px;align-items:center">${s}${lg}</div></div>`;
   }
 
   function desc(items, col){ // items:[[k,v],...]
