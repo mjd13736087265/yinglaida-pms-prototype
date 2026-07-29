@@ -60,9 +60,16 @@ window.PC = (function(){
       {t:'操作日志', path:'/sys/log'}]},
   ];
 
+  // 浏览器会对 hash 中的中文做百分号编码（#/estate/公寓 → %E5%85%AC%E5%AF%93），必须解码后再匹配路由
+  function curHash(){
+    let h = location.hash.slice(1) || '/dashboard';
+    try { h = decodeURIComponent(h); } catch(e) {}
+    return h;
+  }
+
   let expanded = new Set();
   function renderMenu(){
-    const cur = location.hash.slice(1) || '/dashboard';
+    const cur = curHash();
     let h = '';
     MENU.forEach(m=>{
       if(m.children){
@@ -82,7 +89,7 @@ window.PC = (function(){
 
   function route(){
     UI.close();
-    const hash = location.hash.slice(1) || '/dashboard';
+    const hash = curHash();
     const parts = hash.split('/').filter(Boolean);
     // 精确匹配 -> 前缀匹配
     let hit = V[hash];

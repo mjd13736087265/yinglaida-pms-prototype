@@ -78,7 +78,7 @@ PC.roomDetail = function(id){
       ${r.status==='维修'?`<button class="btn sm" onclick="UI.toast('已转为空置，可重新招租')">维修完成</button>`:''}
       <button class="btn sm" onclick="PC.roomEdit('${r.id}')">编辑</button></span>
     </div>
-    ${desc([['所属楼栋',r.bname],['楼层/房号',r.floor+'F / '+r.no],['建筑面积',r.size+' ㎡'],
+    ${desc([['所属片区',badge(DB.areaName(r.area),'gray')],['所属楼栋',r.bname],['楼层/房号',r.floor+'F / '+r.no],['建筑面积',r.size+' ㎡'],
       ['租金标准',rentText],['配套设施', r.cat==='公寓'?'空调、热水器、独立卫浴、宽带': r.cat==='厂房'?'行车、380V动力电、卸货平台':'精装修、中央空调、独立电表'],
       ['当前租户', r.tname? `<span class="lk" onclick="PC.tenant('${r.tname}')">${r.tname}</span>`:'—'],
       ['合同到期', r.endDate||'—'],['押金', r.deposit? '¥'+money(r.deposit):'—'],['电表/水表', myMeters.length? myMeters.map(m=>`<span class="lk" onclick="PC.meterDetail('${m.id}')">${m.type.slice(0,1)}表 ${m.no.slice(-6)}</span>`).join(' '):'未绑定']],3)}
@@ -113,7 +113,8 @@ function estateList(el, cat){
   const rs = catRooms(cat);
   el.innerHTML = `<div class="card">
     <div class="toolbar">
-      <input class="ipt" placeholder="房号 / 租户" style="width:160px" onkeydown="if(event.key==='Enter')UI.toast('查询成功（演示）')">
+      <input class="ipt" placeholder="房号 / 租户" style="width:150px" onkeydown="if(event.key==='Enter')UI.toast('查询成功（演示）')">
+      <select class="ipt" id="es-area" onchange="PC.estateFilter('${cat}')"><option value="">全部片区</option>${DB.areas.filter(a=>DB.buildings.some(b=>b.area===a.id&&b.cat===cat)).map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select>
       <select class="ipt"><option>全部楼栋</option>${DB.buildings.filter(b=>b.cat===cat).map(b=>`<option>${b.name}</option>`).join('')}</select>
       <select class="ipt"><option>全部状态</option><option>空置</option><option>已租</option><option>到期</option><option>维修</option><option>预定</option></select>
       <button class="btn" onclick="UI.toast('查询成功（演示）')">查询</button>
@@ -121,22 +122,34 @@ function estateList(el, cat){
       <button class="btn" onclick="UI.toast('房源台账已导出')">导出</button>
       <button class="btn pri" onclick="PC.roomAdd('${cat}')">＋ 新增房源</button>
     </div>
-    ${table([
+    <div id="es-tb">${estateTable(cat, rs)}</div>
+    <div class="pager">共 ${rs.length} 条 <span class="on">1</span><span onclick="UI.toast('翻页（演示）')">2</span></div>
+  </div>`;
+}
+function estateTable(cat, rs){
+  return table([
       {t:'房号',r:r=>`<span class="lk" onclick="PC.roomDetail('${r.id}')">${r.bname} ${r.no}</span>`},
+      {t:'所属片区',r:r=>badge(DB.areaName(r.area),'gray')},
       {t:'面积(㎡)',k:'size'},
       {t:`租金(${unitOf(cat)})`,k:'rent'},
       {t:'状态',r:r=>badge(r.status, STATUS_COLOR[r.status])},
       {t:'租户',r:r=>r.tname?`<span class="lk" onclick="PC.tenant('${r.tname}')">${r.tname}</span>`:'—'},
       {t:'合同到期',r:r=>r.endDate||'—'},
       {t:'操作',w:'150px',r:r=>`<button class="btn sm ghost" onclick="PC.roomDetail('${r.id}')">详情</button><button class="btn sm ghost" onclick="PC.roomEdit('${r.id}')">编辑</button>`}
-    ], rs.slice(0,16))}
-    <div class="pager">共 ${rs.length} 条 <span class="on">1</span><span onclick="UI.toast('翻页（演示）')">2</span></div>
-  </div>`;
+    ], rs.slice(0,16));
 }
+PC.estateFilter = function(cat){
+  const aid = document.getElementById('es-area').value;
+  const rs = DB.rooms.filter(r=>r.cat===cat && (!aid || r.area===aid));
+  document.getElementById('es-tb').innerHTML = estateTable(cat, rs);
+  UI.toast(aid? '已筛选：'+DB.areaName(aid)+'（'+rs.length+' 间）' : '已显示全部片区');
+};
 CATS.forEach(cat=> PC.reg(`/estate/${cat}`, cat+'房源管理', el=>estateList(el,cat)) );
 PC.roomAdd = function(cat){
+  const areaOpts = DB.areas.filter(a=>DB.buildings.some(b=>b.area===a.id&&b.cat===cat));
   modal({title:'新增房源 · '+cat, size:'lg', body:`<div class="frm">
-    ${fld('所属楼栋', `<select class="ipt">${DB.buildings.filter(b=>b.cat===cat).map(b=>`<option>${b.name}</option>`).join('')}<option>＋ 新建楼栋</option></select>`)}
+    ${fld('所属片区', `<select class="ipt" id="ra-area" onchange="PC.roomAreaChange('${cat}')">${areaOpts.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select><div class="hint">必选：房源归属片区后，账单/表计/报表自动按片区归集</div>`, false, true)}
+    ${fld('所属楼栋', `<select class="ipt" id="ra-bld"></select><div class="hint">仅显示所选片区下的${cat}楼栋</div>`, false, true)}
     ${fld('楼层', `<input class="ipt" type="number" value="1">`)}
     ${fld('房号', `<input class="ipt" placeholder="如 101">`, false, true)}
     ${fld('建筑面积（㎡）', `<input class="ipt" type="number">`, false, true)}
@@ -144,6 +157,12 @@ PC.roomAdd = function(cat){
     ${fld('初始房态', `<select class="ipt"><option>空置</option><option>维修</option></select>`)}
     ${fld('配套设施', `<input class="ipt">`, true)}
   </div>`, footer:`<button class="btn" onclick="UI.close()">取消</button><button class="btn pri" onclick="UI.close();UI.toast('房源已创建')">保存</button>`});
+  PC.roomAreaChange(cat);
+};
+PC.roomAreaChange = function(cat){
+  const aid = document.getElementById('ra-area').value;
+  const bs = DB.buildings.filter(b=>b.area===aid && b.cat===cat);
+  document.getElementById('ra-bld').innerHTML = bs.map(b=>`<option value="${b.id}">${b.name}</option>`).join('') + '<option value="">＋ 在本片区新建楼栋</option>';
 };
 
 /* ---------- 入住 / 退房办理（宿舍） ---------- */
@@ -295,7 +314,9 @@ CATS.forEach(cat=>{
       </div>
       ${table([
         {t:'账单号',r:r=>`<span class="lk" onclick="PC.billDetail('${r.id}')">${r.id}</span>`},
-        {t:'类型',k:'type',r:r=>badge(r.type,'blue')},{t:'租户',k:'tname'},{t:'房源',k:'room'},{t:'账期',k:'month'},
+        {t:'类型',k:'type',r:r=>badge(r.type,'blue')},
+        {t:'所属片区',r:r=>badge(DB.areaName(DB.billArea(r)),'gray')},
+        {t:'租户',k:'tname'},{t:'房源',k:'room'},{t:'账期',k:'month'},
         {t:'金额',r:r=>'¥'+money(r.amount)},{t:'应缴日',k:'due'},
         {t:'状态',r:r=>badge(r.status, STATUS_COLOR[r.status])},{t:'支付方式',r:r=>r.channel||'—'},
         {t:'操作',r:r=>r.status!=='已缴'?`<button class="btn sm ghost" onclick="PC.dun('YS2000')">催缴</button>`:`<button class="btn sm ghost" onclick="UI.toast('订单凭证已生成')">凭证</button>`}
@@ -568,6 +589,7 @@ PC.reg('/park/spots','车位信息管理', (el)=>{
     </div>
     ${table([
       {t:'车位编号',r:r=>`<span class="lk" onclick="PC.spotDetail('${r.id}')">${r.no}</span>`},
+      {t:'所属片区',r:r=>badge(DB.areaName(r.area),'gray')},
       {t:'所属停车场',k:'lotName'},{t:'类型',r:r=>badge(r.type, r.type==='地下'?'purple':'cyan')},
       {t:'尺寸',k:'size'},{t:'月租金',r:r=>'¥'+r.rent},
       {t:'状态',r:r=>badge(r.status, STATUS_COLOR[r.status])},

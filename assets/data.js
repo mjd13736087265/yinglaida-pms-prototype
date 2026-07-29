@@ -133,7 +133,7 @@ window.DB = (function(){
       meters.push({
         id:'M'+String(1000+meters.length), no:'6236618'+String(70000+meters.length),
         type:kind+'表', barMeasureType: kind==='电'?1:2, name:r.bname+' '+r.no+' '+kind+'表',
-        room:r.id, roomName:r.bname+' '+r.no, cons:r.tname||'-', consNo:'23082010'+String(100000+i),
+        room:r.id, roomName:r.bname+' '+r.no, area:r.area, cons:r.tname||'-', consNo:'23082010'+String(100000+i),
         nature: rnd()<0.15?'公摊':'独用', online: rnd()<0.9?'在线':'掉线',
         proto: pick(['DLT645-2007','DLT645-1997']), comm: pick(['485','NB-IoT','LoRa']),
         rateType: kind==='电'? pick(['单费率','复费率(尖峰平谷)']) : '单费率',
@@ -148,7 +148,7 @@ window.DB = (function(){
   // 公摊表
   buildings.slice(0,5).forEach(b=>{
     ['电','水'].forEach(kind=>meters.push({id:'M'+String(1000+meters.length), no:'6236618'+String(70000+meters.length),
-      type:kind+'表', barMeasureType:kind==='电'?1:2, name:b.name+' 公共'+kind+'表', room:b.id, roomName:b.name+'(公共)',
+      type:kind+'表', barMeasureType:kind==='电'?1:2, name:b.name+' 公共'+kind+'表', room:b.id, roomName:b.name+'(公共)', area:b.area,
       cons:'公摊', consNo:'-', nature:'公摊', online:'在线', proto:'DLT645-2007', comm:'NB-IoT',
       rateType:'单费率', feeMode:'后付费', price:kind==='电'?0.85:3.2, ct:1, pt:1, reading:ri(2000,20000)+rnd(),
       lastTime:'2026-07-28 08:30', balance:0, threshold:0, valve:'合闸', gateway:'1400005'}));
@@ -158,7 +158,7 @@ window.DB = (function(){
   meters.slice(0,24).forEach(m=>{
     ['2026-06-01','2026-07-01'].forEach(d=>{
       const v = m.reading - ri(60,400);
-      readings.push({id:'CB'+String(10000+readings.length), meter:m.no, mname:m.name, room:m.roomName,
+      readings.push({id:'CB'+String(10000+readings.length), meter:m.no, mname:m.name, room:m.roomName, area:m.area,
         date:d, value:v.toFixed(2), by: pick(['系统自动采集','系统自动采集','系统自动采集','王抄表(人工)']),
         abnormal: rnd()<0.08, photo: rnd()<0.1});
     });
@@ -340,7 +340,11 @@ window.DB = (function(){
   stats.rentRate = Math.round(stats.rented/stats.roomTotal*1000)/10;
   stats.spotRate = Math.round(stats.spotRented/stats.spotTotal*1000)/10;
 
+  const areaName = id => (areas.find(a=>a.id===id)||{}).name || '-';
+  const billArea = b => { const c = contracts.find(c=>c.id===b.contract); return c? c.area : null; };
+
   return {areas, buildings, lots, rooms, spots, tenants, contracts, bills, meters, readings,
     orders, complaints, assets, receivables, payables, collections, approvals, messages,
-    incomeByMonth, months, api, plans, stats, hotelRates, hotelRooms, invoices, pick, ri};
+    incomeByMonth, months, api, plans, stats, hotelRates, hotelRooms, invoices, pick, ri,
+    areaName, billArea};
 })();

@@ -25,7 +25,9 @@ PC.reg('/fin/recv','应收账款', (el)=>{
     </div>
     ${table([
       {t:'应收单号',r:r=>`<span class="lk" onclick="PC.recvDetail('${r.id}')">${r.id}</span>`},
-      {t:'类型',r:r=>badge(r.type,'blue')},{t:'租户',k:'tenant'},{t:'房源',k:'room'},
+      {t:'类型',r:r=>badge(r.type,'blue')},
+      {t:'所属片区',r:r=>badge(DB.areaName((DB.contracts.find(c=>c.id===r.contract)||{}).area),'gray')},
+      {t:'租户',k:'tenant'},{t:'房源',k:'room'},
       {t:'应收金额',r:r=>'¥'+money(r.amount)},
       {t:'已核销',r:r=>'¥'+money(r.received)},
       {t:'余额',r:r=>`<b style="color:${r.balance>0?'var(--red)':'var(--green)'}">¥${money(r.balance)}</b>`},
@@ -141,6 +143,7 @@ PC.reg('/fin/collect','催收管理', (el)=>{
     <h3>催收台账<span class="more" style="float:right;font-weight:400;font-size:12px;color:var(--ink3)">按欠费金额排序</span></h3>
     ${table([
       {t:'租户',r:r=>`<span class="lk" onclick="PC.tenant('${r.tenant}')">${r.tenant}</span>`},
+      {t:'所属片区',r:r=>badge(DB.areaName((DB.contracts.find(c=>c.id===r.contract)||{}).area),'gray')},
       {t:'房源',k:'room'},{t:'欠费金额',r:r=>`<b style="color:var(--red)">¥${money(r.balance)}</b>`},
       {t:'逾期天数',r:r=>badge(r.days+' 天', r.days>60?'red':'orange')},
       {t:'已催收次数',r:r=>DB.collections.filter(c=>c.recv===r.id).length+' 次'},

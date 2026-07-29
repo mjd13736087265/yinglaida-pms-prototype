@@ -2,58 +2,140 @@
 (function(){
 const {stat, table, badge, donut, lineChart, barChart, desc, timeline, money, num, STATUS_COLOR, tabs, modal, drawer, toast, confirm, fld, close, esc} = UI;
 
-/* ---------- 工作台 ---------- */
-PC.reg('/dashboard','工作台', (el)=>{
+/* ---------- 工作台 2.0（支持片区维度切换） ---------- */
+PC.reg('/dashboard','工作台', (el)=>renderDash(el, PC._dashAid||''));
+PC.dashArea = function(aid){
+  PC._dashAid = aid;
+  renderDash(document.getElementById('app'), aid);
+  document.getElementById('crumb').textContent = '工作台' + (aid? ' · '+DB.areaName(aid) : '');
+};
+function renderDash(el, aid){
   const s = DB.stats;
   const inc = DB.incomeByMonth;
+  const rooms = DB.rooms.filter(r=>r.cat!=='酒店' && (!aid || r.area===aid));
+  const rented = rooms.filter(r=>r.status==='已租'||r.status==='到期').length;
+  const rate = rooms.length? Math.round(rented/rooms.length*1000)/10 : 0;
+  const monthBills = DB.bills.filter(b=>b.month==='2026-07' && (!aid || DB.billArea(b)===aid));
+  const recv = monthBills.reduce((a,b)=>a+b.amount,0);
+  const got = monthBills.filter(b=>b.status==='已缴').reduce((a,b)=>a+b.amount,0);
+  const payRate = recv? Math.round(got/recv*1000)/10 : 0;
+  const overs = DB.receivables.filter(r=>r.status==='逾期' && (!aid || (DB.contracts.find(c=>c.id===r.contract)||{}).area===aid));
+  const arrears = overs.reduce((a,b)=>a+b.balance,0);
+  const todoA = DB.approvals.filter(a=>a.status==='待审批'), todoO = DB.orders.filter(o=>o.status==='待派单');
+  const h = new Date().getHours(), greet = h<12?'上午好':h<18?'下午好':'晚上好';
   el.innerHTML = `
-  <div class="grid4">
-    ${stat('本月应收（万元）', money(s.monthIncome*10000/10000), `实收 <b class="up">${money(96.4)}</b> · 收缴率 <b>91.2%</b>`, "location.hash='#/fin/recv'")}
-    ${stat('综合出租率', s.rentRate+'%', `已租 ${s.rented} / 总房源 ${s.roomTotal} · 车位 ${s.spotRate}%`, "location.hash='#/rpt/rent'")}
-    ${stat('欠费总额（元）', money(s.arrearsTotal), `逾期账单 <b class="down">${DB.receivables.filter(r=>r.status==='逾期').length}</b> 笔`, "location.hash='#/fin/collect'")}
-    ${stat('待办事项', DB.approvals.filter(a=>a.status==='待审批').length + DB.orders.filter(o=>o.status==='待派单').length, `审批 ${DB.approvals.filter(a=>a.status==='待审批').length} · 待派单 ${DB.orders.filter(o=>o.status==='待派单').length} · 待抄表 0`, "PC.todo()")}
+  <div class="db-banner">
+    <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
+      <div>
+        <div class="greet">${greet}，管理员 👋</div>
+        <div class="date">2026 年 7 月 29 日 星期三 · ${aid? '正在查看：'+DB.areaName(aid) : '全部片区 · 3 个园区'} · 今日待办 ${todoA.length+todoO.length} 项</div>
+      </div>
+      <div class="db-qa" style="margin-left:auto">
+        <span class="q" onclick="location.hash='#/estate/公寓/check'">🛏️ 办理入住</span>
+        <span class="q" onclick="PC.orderAdd()">🔧 代客报修</span>
+        <span class="q" onclick="location.hash='#/water/read'">⚡ 远程抄表</span>
+        <span class="q" onclick="PC.genBills()">🧾 生成账单</span>
+        <span class="q" onclick="PC.batchDun()">📣 批量催缴</span>
+      </div>
+    </div>
+    <div class="db-areas">
+      <span class="at ${!aid?'on':''}" onclick="PC.dashArea('')">全部片区</span>
+      ${DB.areas.map(a=>`<span class="at ${aid===a.id?'on':''}" onclick="PC.dashArea('${a.id}')">${a.name}</span>`).join('')}
+    </div>
   </div>
+
+  <div class="kpi5">
+    <div class="kpi" onclick="location.hash='#/fin/recv'">
+      <div class="ic" style="background:var(--blue-bg)">💰</div>
+      <div class="bd"><div class="l">本月应收</div><div class="v">¥${money(recv)}</div><div class="s">实收 <b class="up">¥${money(got)}</b></div></div>
+    </div>
+    <div class="kpi" onclick="location.hash='#/rpt/recv'">
+      <div class="ic" style="background:var(--green-bg)">📈</div>
+      <div class="bd"><div class="l">本月收缴率</div><div class="v">${payRate}%</div><div class="s">目标 95% · ${monthBills.length} 笔账单</div></div>
+    </div>
+    <div class="kpi" onclick="location.hash='#/rpt/rent'">
+      <div class="ic" style="background:var(--purple-bg)">🏢</div>
+      <div class="bd"><div class="l">综合出租率</div><div class="v">${rate}%</div><div class="s">已租 ${rented} / 总房源 ${rooms.length}</div></div>
+    </div>
+    <div class="kpi" onclick="location.hash='#/fin/collect'">
+      <div class="ic" style="background:var(--red-bg)">⚠️</div>
+      <div class="bd"><div class="l">欠费总额</div><div class="v" style="color:var(--red)">¥${money(arrears)}</div><div class="s">逾期 <b class="down">${overs.length}</b> 笔待催收</div></div>
+    </div>
+    <div class="kpi" onclick="PC.todo()">
+      <div class="ic" style="background:var(--orange-bg)">✅</div>
+      <div class="bd"><div class="l">待办事项</div><div class="v">${todoA.length+todoO.length}</div><div class="s">审批 ${todoA.length} · 待派单 ${todoO.length}</div></div>
+    </div>
+  </div>
+
   <div class="row">
     <div class="card" style="flex:1.6">
-      <h3>近 12 个月收入趋势（万元）<span class="more" onclick="location.hash='#/rpt/income'">查看收入报表 →</span></h3>
+      <h3>近 12 个月收入趋势（万元）<span class="more" onclick="location.hash='#/rpt/income'">收入报表 →</span></h3>
       ${lineChart([
         {name:'总收入', data:inc.map(x=>x.total)},
         {name:'租金收入', data:inc.map(x=>x.租金), color:'#16a34a'}
-      ], inc.map(x=>x.m), {h:230})}
+      ], inc.map(x=>x.m), {h:228})}
     </div>
     <div class="card">
-      <h3>房源状态分布<span class="more" onclick="location.hash='#/estate/公寓/map'">房态图 →</span></h3>
+      <h3>房态分布${aid? '（'+DB.areaName(aid)+'）':''}<span class="more" onclick="location.hash='#/estate/公寓/map'">房态图 →</span></h3>
       ${donut([
-        {l:'已租', v:s.rented, c:'#2563eb'},{l:'空置', v:s.vacant, c:'#16a34a'},
-        {l:'即将到期', v:s.expire, c:'#ea8600'},{l:'维修中', v:s.repair, c:'#dc2626'},
-        {l:'已预定', v:s.booked, c:'#7c3aed'}
-      ], {center:s.roomTotal, centerLabel:'总房源'})}
-      <div style="margin-top:14px">
-        <div class="kv"><span>综合出租率</span><b>${s.rentRate}%</b></div>
-        <div class="pbar"><i style="width:${s.rentRate}%"></i></div>
-      </div>
+        {l:'已租', v:rooms.filter(r=>r.status==='已租').length, c:'#2563eb'},
+        {l:'空置', v:rooms.filter(r=>r.status==='空置').length, c:'#16a34a'},
+        {l:'即将到期', v:rooms.filter(r=>r.status==='到期').length, c:'#ea8600'},
+        {l:'维修中', v:rooms.filter(r=>r.status==='维修').length, c:'#dc2626'},
+        {l:'已预定', v:rooms.filter(r=>r.status==='预定').length, c:'#7c3aed'}
+      ], {center:rooms.length, centerLabel:'总房源'})}
     </div>
   </div>
+
   <div class="row">
+    <div class="card" style="flex:1.5">
+      <h3>🗺️ 片区经营对比<span class="more" onclick="location.hash='#/area'">片区管理 →</span></h3>
+      <div style="display:grid;grid-template-columns:110px 1fr 90px 90px;gap:10px;font-size:12px;color:var(--ink3);padding:0 6px 6px">
+        <span>片区</span><span>出租率</span><span style="text-align:right">本月应收</span><span style="text-align:right">欠费笔数</span>
+      </div>
+      ${DB.areas.map(a=>{
+        const rs = DB.rooms.filter(r=>r.cat!=='酒店'&&r.area===a.id);
+        const rd = rs.filter(r=>r.status==='已租'||r.status==='到期').length;
+        const rt = rs.length? Math.round(rd/rs.length*100):0;
+        const mb = DB.bills.filter(b=>b.month==='2026-07'&&DB.billArea(b)===a.id).reduce((x,b)=>x+b.amount,0);
+        const ov = DB.receivables.filter(r=>r.status==='逾期'&&(DB.contracts.find(c=>c.id===r.contract)||{}).area===a.id).length;
+        return `<div class="region-li" onclick="PC.areaDetail('${a.id}')">
+          <span class="rn">${a.name}</span>
+          <span><div class="pbar" style="width:70%;display:inline-block;vertical-align:middle"><i style="width:${rt}%"></i></div> <b>${rt}%</b></span>
+          <span class="rv">¥${money(mb)}</span>
+          <span class="rv">${ov? `<b style="color:var(--red)">${ov} 笔</b>` : '无'}</span>
+        </div>`;
+      }).join('')}
+      <div style="font-size:12px;color:var(--ink3);margin-top:10px">点击片区行可查看片区详情；顶部切换片区后，本页所有指标按片区过滤。</div>
+    </div>
+    <div class="card">
+      <h3>✅ 我的待办<span class="more" onclick="PC.todo()">全部 →</span></h3>
+      ${[...todoA.slice(0,3).map(a=>({c:'#ea8600', t:`【审批】${a.type} · ${a.from}`, tm:a.create.slice(5), fn:`PC.approval('${a.id}')`})),
+         ...todoO.slice(0,3).map(o=>({c:'#dc2626', t:`【派单】${o.type} · ${o.room}`, tm:o.create.slice(5,10), fn:`PC.order('${o.id}')`}))].slice(0,6).map(x=>`
+        <div class="todo-li" onclick="${x.fn}"><i class="dot" style="background:${x.c}"></i><span class="tt">${x.t}</span><span class="tm">${x.tm}</span></div>`).join('') || '<div class="empty">暂无待办</div>'}
+    </div>
     <div class="card">
       <h3>⚠️ 欠费预警 TOP5<span class="more" onclick="location.hash='#/fin/collect'">一键催收 →</span></h3>
       ${table([
         {t:'租户', k:'tenant', r:r=>`<span class="lk" onclick="PC.tenant('${r.tenant}')">${r.tenant}</span>`},
-        {t:'房源', k:'room'},
-        {t:'欠费金额', r:r=>`<b style="color:var(--red)">¥${money(r.balance)}</b>`},
-        {t:'逾期天数', r:r=>badge(r.days+' 天', r.days>60?'red':r.days>30?'orange':'cyan')},
-        {t:'操作', r:r=>`<button class="btn sm" onclick="PC.dun('${r.id}')">催收</button>`}
-      ], DB.receivables.filter(r=>r.status==='逾期').sort((a,b)=>b.balance-a.balance).slice(0,5))}
+        {t:'片区', r:r=>badge(DB.areaName((DB.contracts.find(c=>c.id===r.contract)||{}).area),'gray')},
+        {t:'欠费', r:r=>`<b style="color:var(--red)">¥${money(r.balance)}</b>`},
+        {t:'逾期', r:r=>badge(r.days+'天', r.days>60?'red':r.days>30?'orange':'cyan')},
+        {t:'', r:r=>`<button class="btn sm" onclick="PC.dun('${r.id}')">催收</button>`}
+      ], overs.sort((a,b)=>b.balance-a.balance).slice(0,5))}
     </div>
+  </div>
+
+  <div class="row">
     <div class="card">
-      <h3>📄 合同到期预警（90 天内）<span class="more" onclick="location.hash='#/rpt/contract'">合同报表 →</span></h3>
+      <h3>📄 合同到期预警<span class="more" onclick="location.hash='#/rpt/contract'">合同报表 →</span></h3>
       ${table([
         {t:'合同号', k:'id', r:r=>`<span class="lk" onclick="PC.contract('${r.id}')">${r.id}</span>`},
         {t:'租户', k:'tname'},
         {t:'房源', k:'roomName'},
         {t:'到期日', k:'end'},
-        {t:'操作', r:r=>`<button class="btn sm" onclick="UI.toast('已向 ${r.tname} 发送续租提醒')">续租提醒</button>`}
-      ], DB.contracts.filter(c=>c.status==='即将到期').slice(0,5))}
+        {t:'', r:r=>`<button class="btn sm" onclick="UI.toast('已向 ${r.tname} 发送续租提醒')">续租提醒</button>`}
+      ], DB.contracts.filter(c=>c.status==='即将到期' && (!aid || c.area===aid)).slice(0,5))}
     </div>
     <div class="card">
       <h3>🔧 最新报修工单<span class="more" onclick="location.hash='#/svc/orders'">工单管理 →</span></h3>
@@ -65,13 +147,14 @@ PC.reg('/dashboard','工作台', (el)=>{
       ], DB.orders.slice(0,5))}
     </div>
   </div>
+
   <div class="card">
     <h3>📅 项目交付计划（计划表 0727）<span class="more">当前阶段：原型设计确认</span></h3>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       ${DB.plans.map(p=>`<div style="border:1px solid var(--line);border-radius:8px;padding:9px 13px;font-size:12.5px;background:#fafbfe"><b>${p[0]}</b><div style="color:var(--ink3);margin-top:3px">${p[1]} ~ ${p[2]}</div></div>`).join('')}
     </div>
   </div>`;
-});
+}
 
 PC.todo = function(){
   modal({title:'我的待办事项', size:'lg', body:`

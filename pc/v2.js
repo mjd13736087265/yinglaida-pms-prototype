@@ -18,7 +18,8 @@ function devicePage(el, type){
   </div>
   <div class="card">
     <div class="toolbar">
-      <input class="ipt" placeholder="表号 / 表名 / 户名 模糊查询" style="width:220px" onkeydown="if(event.key==='Enter')UI.toast('已按关键词过滤（演示）')">
+      <input class="ipt" placeholder="表号 / 表名 / 户名 模糊查询" style="width:200px" onkeydown="if(event.key==='Enter')UI.toast('已按关键词过滤（演示）')">
+      <select class="ipt" id="dev-area" onchange="PC.deviceFilter('${type}')"><option value="">全部片区</option>${DB.areas.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select>
       <select class="ipt"><option>全部状态</option><option>在线</option><option>掉线</option></select>
       <select class="ipt"><option>全部性质</option><option>独用</option><option>公摊</option></select>
       <button class="btn" onclick="UI.toast('已按条件查询（演示）')">查询</button>
@@ -27,9 +28,15 @@ function devicePage(el, type){
       <button class="btn" onclick="UI.toast('已导出 ${list.length} 条表计台账')">导出</button>
       <button class="btn pri" onclick="PC.meterEdit(null,'${type}')">＋ 登记${kind}</button>
     </div>
-    ${table([
+    <div id="dev-tb">${deviceTable(list)}</div>
+    <div class="pager">共 ${list.length} 条 <span class="on">1</span><span onclick="UI.toast('翻页（演示）')">2</span><span onclick="UI.toast('翻页（演示）')">3</span></div>
+  </div>`;
+}
+function deviceTable(list){
+  return table([
       {t:'表计编号', r:r=>`<span class="lk" onclick="PC.meterDetail('${r.id}')">${r.no}</span>`},
       {t:'表计名称', k:'name'},
+      {t:'所属片区', r:r=>badge(DB.areaName(r.area),'gray')},
       {t:'性质', r:r=>badge(r.nature, r.nature==='公摊'?'purple':'blue')},
       {t:'状态', r:r=>badge(r.online, r.online==='在线'?'green':'red')},
       {t:'费率/计费模式', r:r=>`${r.rateType}<br>${badge(r.feeMode||'预付费', r.feeMode==='后付费'?'cyan':'purple')}`},
@@ -40,10 +47,14 @@ function devicePage(el, type){
       {t:'操作', w:'180px', r:r=>`<button class="btn sm ghost" onclick="PC.meterDetail('${r.id}')">详情</button>
         <button class="btn sm ghost" onclick="PC.meterCmd('${r.id}','抄表')">抄表</button>
         <button class="btn sm ghost" onclick="PC.meterCmd('${r.id}','${r.valve==='合闸'?'分闸':'合闸'}')">${r.valve==='合闸'?'分闸':'合闸'}</button>`}
-    ], list.slice(0,14))}
-    <div class="pager">共 ${list.length} 条 <span class="on">1</span><span onclick="UI.toast('翻页（演示）')">2</span><span onclick="UI.toast('翻页（演示）')">3</span></div>
-  </div>`;
+    ], list.slice(0,14));
 }
+PC.deviceFilter = function(type){
+  const aid = document.getElementById('dev-area').value;
+  const list = DB.meters.filter(m=>m.barMeasureType===Number(type) && (!aid || m.area===aid));
+  document.getElementById('dev-tb').innerHTML = deviceTable(list);
+  UI.toast(aid? '已筛选：'+DB.areaName(aid)+'（'+list.length+' 块）' : '已显示全部片区');
+};
 PC.reg('/device/1','电表管理', el=>devicePage(el,'1'));
 PC.reg('/device/2','水表管理', el=>devicePage(el,'2'));
 
@@ -58,12 +69,16 @@ PC.meterSync = function(){
 };
 PC.meterEdit = function(id, type){
   const m = id? DB.meters.find(x=>x.id===id) : {type:type==='1'?'电表':'水表'};
+  const curRoom = id? DB.rooms.find(r=>r.id===m.room) : null;
+  const curArea = m.area || (curRoom? curRoom.area : DB.areas[0].id);
   modal({title: id? '编辑表计 · '+m.no : '登记新表计', size:'lg', body:`<div class="frm">
     ${fld('表计编号 bar_measure_no', `<input class="ipt" value="${m.no||''}">`, false, true)}
     ${fld('表计名称', `<input class="ipt" value="${m.name||''}">`, false, true)}
+    ${fld('所属片区', `<select class="ipt" id="me-area" onchange="PC.meterAreaChange()">${DB.areas.map(a=>`<option value="${a.id}" ${a.id===curArea?'selected':''}>${a.name}</option>`).join('')}</select><div class="hint">必选：表计必须归属片区，用于分片区统计与权限隔离</div>`, false, true)}
+    ${fld('绑定楼栋', `<select class="ipt" id="me-bld" onchange="PC.meterBldChange()"></select>`, false, true)}
+    ${fld('绑定房源 / 公共区域', `<select class="ipt" id="me-room"></select><div class="hint">独用表绑定到房间；公摊表选择「公共区域（整栋）」</div>`, false, true)}
     ${fld('表计类型', `<select class="ipt"><option>${m.type||'电表'}</option><option>${m.type==='电表'?'水表':'电表'}</option></select>`)}
     ${fld('使用性质', `<select class="ipt"><option>${m.nature||'独用'}</option><option>${m.nature==='公摊'?'独用':'公摊'}</option></select><div class="hint">公摊表可单独配置分摊规则</div>`)}
-    ${fld('绑定房源 / 区域', `<input class="ipt" value="${m.roomName||''}" placeholder="选择楼栋-房间 或 公共区域">`)}
     ${fld('网关地址 bar_gateway_no', `<input class="ipt" value="${m.gateway||'1400005'}">`)}
     ${fld('通信方式', `<select class="ipt"><option>NB-IoT</option><option>485</option><option>LoRa</option></select>`)}
     ${fld('通信协议', `<select class="ipt"><option>DLT645-2007</option><option>DLT645-1997</option></select>`)}
@@ -74,6 +89,20 @@ PC.meterEdit = function(id, type){
     ${fld('余额预警阈值（元）', `<input class="ipt" value="${m.threshold??50}">`)}
     ${fld('阶梯计费模板', `<select class="ipt"><option>园区标准阶梯（一表一模板）</option><option>居民阶梯三档</option><option>自定义模板…</option></select><div class="hint">支持峰谷电价、季节性调价</div>`, true)}
   </div>`, footer:`<button class="btn" onclick="UI.close()">取消</button><button class="btn pri" onclick="UI.close();UI.toast('表计信息已保存并同步至表计平台')">保存</button>`});
+  PC.meterAreaChange(m.room);
+};
+PC.meterAreaChange = function(keepRoom){
+  const aid = document.getElementById('me-area').value;
+  const bs = DB.buildings.filter(b=>b.area===aid);
+  document.getElementById('me-bld').innerHTML = bs.map(b=>`<option value="${b.id}">${b.name}（${b.cat}）</option>`).join('');
+  PC.meterBldChange(keepRoom);
+};
+PC.meterBldChange = function(keepRoom){
+  const bid = document.getElementById('me-bld').value;
+  const rs = DB.rooms.filter(r=>r.bid===bid);
+  document.getElementById('me-room').innerHTML =
+    `<option value="${bid}">（公共区域 · 整栋公摊）</option>` +
+    rs.map(r=>`<option value="${r.id}" ${r.id===keepRoom?'selected':''}>${r.no}（${r.status}${r.tname?' · '+r.tname:''}）</option>`).join('');
 };
 PC.meterDetail = function(id){
   const m = DB.meters.find(x=>x.id===id);
@@ -87,7 +116,7 @@ PC.meterDetail = function(id){
         <button class="btn sm ${m.valve==='合闸'?'danger':''}" onclick="PC.meterCmd('${m.id}','${m.valve==='合闸'?'分闸':'合闸'}')">远程${m.valve==='合闸'?'分闸':'合闸'}</button>
         <button class="btn sm" onclick="PC.meterEdit('${m.id}','${m.barMeasureType}')">编辑</button>
       </span></div>
-    ${desc([['表计编号',m.no],['绑定房源',m.roomName],['用户户名',m.cons],
+    ${desc([['表计编号',m.no],['所属片区',badge(DB.areaName(m.area),'gray')],['绑定房源',m.roomName],['用户户名',m.cons],
       ['用户户号',m.consNo],['通信方式',m.comm+' / '+m.proto],['网关地址',m.gateway],
       ['费率类型',m.rateType],['计费模式',badge(m.feeMode||'预付费', m.feeMode==='后付费'?'cyan':'purple')],['单价',m.price+' 元'],
       ['最新读数',`<b>${m.reading.toFixed(2)}</b>`],['最近通信',m.lastTime],['账户余额',`¥${money(m.balance)}（阈值 ${m.threshold}）`]],3)}
@@ -189,7 +218,8 @@ PC.reg('/water/records','抄表记录', (el)=>{
       <span class="sp"></span><button class="btn" onclick="UI.toast('抄表记录已导出 Excel')">导出</button>
     </div>
     ${table([
-      {t:'抄表时间',k:'date'},{t:'表号',k:'meter'},{t:'表计名称',k:'mname'},{t:'房源',k:'room'},
+      {t:'抄表时间',k:'date'},{t:'表号',k:'meter'},{t:'表计名称',k:'mname'},
+      {t:'所属片区',r:r=>badge(DB.areaName(r.area),'gray')},{t:'房源',k:'room'},
       {t:'本期读数',r:r=>`<b>${r.value}</b>`},
       {t:'抄表方式',r:r=>badge(r.by.includes('人工')?'人工录入':'自动采集', r.by.includes('人工')?'cyan':'blue')},
       {t:'抄表人/来源',k:'by'},
@@ -228,6 +258,7 @@ PC.reg('/water/bills','账单推送', (el)=>{
     ${table([
       {t:'账单号',r:r=>`<span class="lk" onclick="PC.billDetail('${r.id}')">${r.id}</span>`},
       {t:'类型',r:r=>badge(r.type, r.type==='电费'?'orange':'cyan')},
+      {t:'所属片区',r:r=>badge(DB.areaName(DB.billArea(r)),'gray')},
       {t:'租户',k:'tname'},{t:'房源',k:'room'},{t:'账期',k:'month'},
       {t:'用量',r:r=>r.type==='电费'? (r.amount/0.85).toFixed(1)+' kWh' : (r.amount/3.2).toFixed(1)+' m³'},
       {t:'金额',r:r=>'¥'+money(r.amount)},
@@ -262,7 +293,7 @@ PC.billDetail = function(id){
   drawer('账单明细 · '+b.id, `
     <div style="display:flex;gap:8px;margin-bottom:14px">${badge(b.type, b.type==='电费'?'orange':b.type==='水费'?'cyan':'blue')}${badge(b.status, STATUS_COLOR[b.status])}
       <span style="margin-left:auto"><button class="btn sm" onclick="UI.toast('订单凭证 PDF 已生成')">下载凭证</button></span></div>
-    ${desc([['账单号',b.id],['租户',b.tname],['房源',b.room],['账期',b.month],['关联合同',b.contract],['应缴截止',b.due]],3)}
+    ${desc([['账单号',b.id],['所属片区',badge(DB.areaName(DB.billArea(b)),'gray')],['租户',b.tname],['房源',b.room],['账期',b.month],['关联合同',b.contract],['应缴截止',b.due]],3)}
     <h3 style="font-size:14px;margin:16px 0 10px">费用明细</h3>
     ${table([{t:'项目',k:'n'},{t:'用量/基数',k:'u'},{t:'单价',k:'p'},{t:'金额',r:r=>'¥'+money(r.a)}],
       b.type==='电费'||b.type==='水费' ? [
@@ -284,6 +315,7 @@ PC.reg('/water/share','公摊管理', (el)=>{
     ${table([
       {t:'公共表计',r:r=>`<span class="lk" onclick="PC.meterDetail('${r.id}')">${r.name}</span>`},
       {t:'表号',k:'no'},
+      {t:'所属片区',r:r=>badge(DB.areaName(r.area),'gray')},
       {t:'本月用量',r:r=>`<b>${(r.reading%300+80).toFixed(1)}</b> ${r.type==='电表'?'kWh':'m³'}`},
       {t:'本月金额',r:r=>'¥'+money((r.reading%300+80)*r.price)},
       {t:'分摊方式',r:r=>badge('按面积分摊','purple')},
