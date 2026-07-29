@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>英莱达区域产业管理系统 · PC 管理后台（原型）</title>
+<link rel="stylesheet" href="../assets/ui.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">🏢 英莱达<small>区域产业管理系统</small></div>
+    <nav class="menu" id="menu"></nav>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <div class="crumb" id="crumb">工作台</div>
+      <div class="right">
+        <span style="cursor:pointer" onclick="location.hash='#/screen-entry'">📊 驾驶舱大屏</span>
+        <span class="bell" onclick="PC.notices()">🔔<i>6</i></span>
+        <span id="area-switch" style="cursor:pointer" title="切换片区数据范围">📍 全部片区 ▾</span>
+        <div class="avatar" title="陈志远 · 片区经理">陈</div>
+      </div>
+    </div>
+    <div class="content" id="app"></div>
+  </div>
+</div>
+<script src="../assets/ui.js"></script>
+<script src="../assets/data.js"></script>
+<script src="pc.js"></script>
+<script src="v1.js"></script>
+<script src="v2.js"></script>
+<script src="v3.js"></script>
+<script src="v4.js"></script>
+<script src="v5.js"></script>
+<script>PC.start();</script>
+</body>
+</html>

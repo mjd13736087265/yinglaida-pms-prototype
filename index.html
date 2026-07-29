@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>英莱达区域产业管理系统 · 原型总览</title>
+<link rel="stylesheet" href="assets/ui.css">
+<style>
+body{background:#0e1b33;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.portal{max-width:1080px;width:92%;padding:56px 0}
+.portal h1{color:#fff;font-size:34px;letter-spacing:2px;margin:0 0 6px}
+.portal .sub{color:#8fa3c7;font-size:14px;margin-bottom:40px}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.pcard{display:block;background:linear-gradient(160deg,#16264a,#101d3a);border:1px solid #24365f;border-radius:14px;padding:26px 28px;color:#dbe6ff;text-decoration:none;transition:.25s}
+.pcard:hover{transform:translateY(-4px);border-color:#3f6fe0;box-shadow:0 14px 40px rgba(28,80,220,.25)}
+.pcard .t{font-size:19px;font-weight:600;color:#fff;margin-bottom:8px}
+.pcard .d{font-size:13px;color:#8fa3c7;line-height:1.8}
+.pcard .go{margin-top:14px;font-size:12px;color:#5b8cff}
+.tags{margin-top:10px}.tag{display:inline-block;background:#1c3160;color:#9db4e8;border-radius:4px;font-size:11px;padding:2px 8px;margin:0 6px 6px 0}
+.foot{color:#5b6d94;font-size:12px;margin-top:36px}
+</style>
+</head>
+<body>
+<div class="portal">
+  <h1>英莱达区域产业管理系统</h1>
+  <div class="sub">高保真交互原型 v1.0 · 依据《产业管理系统功能清单1.0》《项目计划表0727》《硬件API接口文档》设计 · 四端全模块可点击</div>
+  <div class="cards">
+    <a class="pcard" href="pc/index.html">
+      <div class="t">🖥️ PC 管理后台</div>
+      <div class="d">片区 / 设备 / 水电费 / 宿舍 / 厂房 / 车位 / 写字楼 / 商业 / 酒店 / 应收应付 / 物业服务 / 固定资产 / 数据报表 / 系统管理 / 数据对接</div>
+      <div class="tags"><span class="tag">15 大模块</span><span class="tag">列表+详情+办理弹窗</span></div>
+      <div class="go">进入原型 →</div>
+    </a>
+    <a class="pcard" href="mpa/index.html">
+      <div class="t">📱 小程序 · 管理端</div>
+      <div class="d">工作台 / 产业管理 / 收租管理 / 合同管理 / 水电管理 / 物业报修 / 数据报表 / 审批中心 / 个人中心</div>
+      <div class="tags"><span class="tag">手机壳预览</span><span class="tag">一键催缴·入住办理</span></div>
+      <div class="go">进入原型 →</div>
+    </a>
+    <a class="pcard" href="mp/index.html">
+      <div class="t">📲 小程序 · 用户端</div>
+      <div class="d">我的合同 / 待缴账单 / 在线缴费 / 在线报修 / 更多租赁 / 我的租赁 / 水电设备 / 消息 / 我的</div>
+      <div class="tags"><span class="tag">手机壳预览</span><span class="tag">缴费·报修全流程</span></div>
+      <div class="go">进入原型 →</div>
+    </a>
+    <a class="pcard" href="screen/index.html" target="_blank">
+      <div class="t">📊 驾驶舱数据大屏</div>
+      <div class="d">核心指标 / 房源状态 / 车位状态 / 缴费状态 / 欠费预警 / 合同预警 / 异常预警（新窗口全屏打开）</div>
+      <div class="tags"><span class="tag">实时刷新动效</span><span class="tag">1920×1080 自适应</span></div>
+      <div class="go">进入原型 →</div>
+    </a>
+  </div>
+  <div class="foot">原型数据均为演示模拟数据 · 智能水电表/门禁对接参数取自《2025-0311 API接口文档》</div>
+</div>
+</body>
+</html>

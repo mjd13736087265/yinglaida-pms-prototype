@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>英莱达经营驾驶舱 · 数据大屏</title>
+<link rel="stylesheet" href="../assets/ui.css">
+<style>
+body{background:#060d1f;overflow:hidden}
+#scr{width:1920px;height:1080px;transform-origin:top left;position:relative;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#cfe0ff;background:
+  radial-gradient(1000px 500px at 50% -10%, #12224a 0%, transparent 60%),
+  radial-gradient(700px 400px at 8% 110%, #0d1c40 0%, transparent 60%),
+  radial-gradient(700px 400px at 92% 110%, #0d1c40 0%, transparent 60%), #060d1f}
+.sc-head{height:84px;display:flex;align-items:center;justify-content:center;position:relative;
+  background:linear-gradient(180deg,rgba(31,68,150,.35),transparent)}
+.sc-head h1{font-size:30px;letter-spacing:8px;color:#eaf2ff;font-weight:700;text-shadow:0 0 24px rgba(80,140,255,.6)}
+.sc-head .tm{position:absolute;right:34px;top:26px;font-size:15px;color:#7ea2e8;font-variant-numeric:tabular-nums}
+.sc-head .bk{position:absolute;left:30px;top:24px;font-size:13px;color:#5b7fc9;cursor:pointer}
+.sc-grid{display:grid;grid-template-columns:520px 1fr 520px;grid-template-rows:200px 1fr 1fr 1fr;gap:16px;padding:12px 22px 22px;height:996px;
+  grid-template-areas:"kpis kpis kpis" "rooms map pay" "arrears map warns" "income park meters"}
+.kpis{grid-area:kpis}
+.sc-grid>.pn:nth-of-type(1){grid-area:rooms}
+.sc-grid>.pn:nth-of-type(2){grid-area:map}
+.sc-grid>.pn:nth-of-type(3){grid-area:pay}
+.sc-grid>.pn:nth-of-type(4){grid-area:arrears}
+.sc-grid>.pn:nth-of-type(5){grid-area:income}
+.sc-grid>.pn:nth-of-type(6){grid-area:warns}
+.sc-grid>.pn:nth-of-type(7){grid-area:park}
+.sc-grid>.pn:nth-of-type(8){grid-area:meters}
+.pn{background:linear-gradient(160deg,rgba(20,40,90,.55),rgba(10,22,50,.55));border:1px solid #1d3468;border-radius:10px;padding:14px 16px;position:relative;overflow:hidden}
+.pn:before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#3f7bff,transparent)}
+.pn h3{font-size:15px;color:#9fc0ff;letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.pn h3:before{content:"";width:4px;height:14px;background:#3f7bff;border-radius:2px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.kpi{background:linear-gradient(160deg,rgba(24,50,110,.6),rgba(12,26,58,.6));border:1px solid #22407c;border-radius:10px;padding:12px 16px;position:relative}
+.kpi .l{font-size:13px;color:#8fb0ea}
+.kpi .v{font-size:32px;font-weight:800;color:#fff;margin-top:6px;font-variant-numeric:tabular-nums;text-shadow:0 0 18px rgba(90,150,255,.5)}
+.kpi .v small{font-size:14px;color:#8fb0ea;font-weight:400}
+.kpi .s{font-size:12px;color:#6f93d8;margin-top:4px}
+.up{color:#3ddc97}.down{color:#ff6b6b}
+.scroll-list{overflow:hidden;position:relative}
+.sl-row{display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid rgba(60,100,180,.18);font-size:13px}
+.sl-row .nm{color:#dbe7ff}.sl-row .amt{color:#ffb04d;font-weight:700;font-variant-numeric:tabular-nums}
+.sl-row .dt{color:#5f7fc0;font-size:12px}
+.pill{border-radius:10px;padding:1px 8px;font-size:11px}
+.pg{background:rgba(61,220,151,.15);color:#3ddc97}.po{background:rgba(255,176,77,.15);color:#ffb04d}
+.pr{background:rgba(255,107,107,.15);color:#ff6b6b}.pb{background:rgba(91,140,255,.18);color:#8fb0ff}
+.pc{background:rgba(56,200,220,.15);color:#4fd8e8}
+.map-wrap{position:relative;height:calc(100% - 30px)}
+.ring{position:absolute;border-radius:50%;border:1px solid rgba(80,140,255,.25)}
+.dot{position:absolute;width:8px;height:8px;border-radius:50%;background:#3ddc97;box-shadow:0 0 10px #3ddc97}
+.dot.warn{background:#ffb04d;box-shadow:0 0 10px #ffb04d}
+.dot.bad{background:#ff6b6b;box-shadow:0 0 10px #ff6b6b}
+.dot .lb{position:absolute;left:12px;top:-4px;font-size:11px;color:#bcd3ff;white-space:nowrap}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:12.5px}
+.bar-row .bl{width:64px;color:#9fc0ff;text-align:right}
+.bar-row .bt{flex:1;height:14px;background:rgba(60,100,180,.15);border-radius:7px;overflow:hidden}
+.bar-row .bt i{display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,#2456d6,#4fd8e8)}
+.bar-row .bv{width:52px;color:#dbe7ff;font-variant-numeric:tabular-nums}
+.mini{font-size:12px;color:#6f93d8}
+.flip{animation:flip 8s infinite}
+@keyframes flip{0%,88%{opacity:1}94%{opacity:.2}100%{opacity:1}}
+</style>
+</head>
+<body>
+<div id="scr">
+  <div class="sc-head">
+    <span class="bk" onclick="location.href='../index.html'">← 返回原型总览</span>
+    <h1>英莱达区域产业经营驾驶舱</h1>
+    <span class="tm" id="clock"></span>
+  </div>
+  <div class="sc-grid">
+    <div class="kpis" id="kpis"></div>
+    <div class="pn"><h3>房源状态总览</h3><div id="roomBars"></div><div class="mini" id="roomNote" style="margin-top:6px"></div></div>
+    <div class="pn"><h3>园区房源实时分布</h3><div class="map-wrap" id="map"></div></div>
+    <div class="pn"><h3>缴费状态（本月）</h3><div id="payDonut" style="display:flex;gap:14px;align-items:center"></div></div>
+    <div class="pn"><h3>欠费预警 TOP</h3><div class="scroll-list" id="arrears"></div></div>
+    <div class="pn"><h3>收入趋势（万元）</h3><div id="incomeChart"></div></div>
+    <div class="pn"><h3>合同到期 & 异常预警</h3><div class="scroll-list flip" id="warns"></div></div>
+    <div class="pn"><h3>车位状态</h3><div id="park"></div></div>
+    <div class="pn"><h3>智能表计 & 能耗</h3><div id="meters"></div></div>
+  </div>
+</div>
+<script src="../assets/ui.js"></script>
+<script src="../assets/data.js"></script>
+<script src="screen.js"></script>
+</body>
+</html>
