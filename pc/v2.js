@@ -6,10 +6,12 @@ const esc = UI.esc;
 /* ================= 设备管理（电表/水表） ================= */
 function devicePage(el, type){
   const kind = type==='1'?'电表':'水表';
-  const list = DB.meters.filter(m=>m.barMeasureType===Number(type));
+  const scope = PC.getScope? PC.getScope() : '';
+  const list = DB.meters.filter(m=>m.barMeasureType===Number(type) && (!scope || m.area===scope));
   const online = list.filter(m=>m.online==='在线').length;
   const share = list.filter(m=>m.nature==='公摊').length;
   el.innerHTML = `
+  ${scope?`<div style="background:var(--blue-bg);border:1px solid #c2d5fb;border-radius:8px;padding:8px 14px;font-size:12.5px;color:var(--blue);margin-bottom:14px">🔒 数据权限视角：仅显示 <b>${DB.areaName(scope)}</b> 的表计（由角色数据权限控制，顶栏可切换）</div>`:''}
   <div class="grid4">
     ${stat(kind+'总数', list.length, `网关 ${new Set(list.map(m=>m.gateway)).size} 个`)}
     ${stat('在线率', Math.round(online/list.length*100)+'%', `在线 ${online} · 掉线 ${list.length-online}`, null)}
@@ -19,7 +21,7 @@ function devicePage(el, type){
   <div class="card">
     <div class="toolbar">
       <input class="ipt" placeholder="表号 / 表名 / 户名 模糊查询" style="width:200px" onkeydown="if(event.key==='Enter')UI.toast('已按关键词过滤（演示）')">
-      <select class="ipt" id="dev-area" onchange="PC.deviceFilter('${type}')"><option value="">全部片区</option>${DB.areas.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select>
+      <select class="ipt" id="dev-area" onchange="PC.deviceFilter('${type}')"><option value="">全部片区</option>${DB.areas.map(a=>`<option value="${a.id}" ${scope===a.id?'selected':''}>${a.name}</option>`).join('')}</select>
       <select class="ipt"><option>全部状态</option><option>在线</option><option>掉线</option></select>
       <select class="ipt"><option>全部性质</option><option>独用</option><option>公摊</option></select>
       <button class="btn" onclick="UI.toast('已按条件查询（演示）')">查询</button>
@@ -143,6 +145,22 @@ PC.meterDetail = function(id){
 };
 PC.meterCmd = function(id, cmd){
   const m = DB.meters.find(x=>x.id===id);
+  if(cmd==='分闸'){ // R-05：手动分闸二次确认 + 留痕
+    modal({title:'⚠️ 手动分闸确认 · '+m.no, body:`
+      <div style="background:var(--red-bg);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--red);margin-bottom:12px">
+        分闸将立即中断 <b>${m.name}</b> 供电/供水。按欠费联动策略，手动分闸需填写原因并留痕，操作不可撤销（需再次手动合闸恢复）。</div>
+      <div class="frm">
+        ${fld('分闸原因（必填，写入审计日志）', `<select class="ipt" id="cut-reason"><option>欠费催缴无果，依约分闸</option><option>租户申请暂停用电</option><option>安全隐患临时断电</option><option>其他（备注说明）</option></select>`, true)}
+        ${fld('缓冲与通知', `<label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" checked> 分闸前推送小程序/短信通知租户（提前 10 分钟）</label>`)}
+        ${fld('备注', `<input class="ipt" placeholder="补充说明（选填）">`)}
+      </div>`,
+      footer:`<button class="btn" onclick="UI.close()">取消</button><button class="btn danger" onclick="UI.close();PC.meterCmdGo('${id}','分闸')">确认分闸并留痕</button>`});
+    return;
+  }
+  PC.meterCmdGo(id, cmd);
+};
+PC.meterCmdGo = function(id, cmd){
+  const m = DB.meters.find(x=>x.id===id);
   const apiMap = {'抄表':'/api/platform/bar/engineer/callTermTask','分闸':'/api/platform/bar/engineer/disconnectMeter','合闸':'/api/platform/bar/engineer/connectMeter'};
   const extra = cmd==='抄表'?'communicationType=2（远程通讯）':'meterNo='+m.no;
   modal({title:'远程'+cmd+' · '+m.no, size:'sm', body:`
@@ -224,7 +242,7 @@ PC.reg('/water/records','抄表记录', (el)=>{
       {t:'抄表方式',r:r=>badge(r.by.includes('人工')?'人工录入':'自动采集', r.by.includes('人工')?'cyan':'blue')},
       {t:'抄表人/来源',k:'by'},
       {t:'异常',r:r=>r.abnormal?badge('用量异常','red'):badge('正常','green')},
-      {t:'操作',r:r=>`<button class="btn sm ghost" onclick="PC.readingDetail('${r.id}')">明细</button>${r.abnormal?`<button class="btn sm ghost" onclick="UI.toast('已标记复核完成')">复核</button>`:''}`}
+      {t:'操作',r:r=>`<button class="btn sm ghost" onclick="PC.readingDetail('${r.id}')">明细</button>${r.abnormal?`<button class="btn sm ghost" onclick="PC.readingReview('${r.id}')">复核</button>`:''}`}
     ], DB.readings)}
   </div>`;
 });
@@ -233,7 +251,8 @@ PC.readingDetail = function(id){
   drawer('抄表明细 · '+r.id, `
     ${desc([['抄表时间',r.date],['表计编号',r.meter],['表计名称',r.mname],['绑定房源',r.room],
       ['本期读数',r.value],['抄表方式',r.by],['数据校验',r.abnormal?badge('异常波动 +182%','red'):badge('正常','green')],['表盘照片',r.photo?'📷 1 张':'（自动采集无照片）']],2)}
-    ${r.abnormal?`<div style="margin-top:14px;background:var(--red-bg);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--red)">⚠️ 本期用量较上月增长 182%，已自动触发用量预警并通知管理员复核。可能原因：设备长时间运行 / 表计故障 / 私接线路。</div>`:''}
+    ${r.abnormal?`<div style="margin-top:14px;background:var(--red-bg);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--red)">⚠️ 本期用量较上月增长 182%，已自动触发用量预警并通知管理员复核。可能原因：设备长时间运行 / 表计故障 / 私接线路。</div>
+    <div style="margin-top:12px;display:flex;gap:8px"><button class="btn pri" onclick="PC.readingReview('${r.id}')">进入复核处理</button></div>`:''}
   `);
 };
 
@@ -463,7 +482,8 @@ PC.reg('/api/door','门禁对接', (el)=>{
     <h3>智能门禁对接（计划 08-10 ~ 08-22 与水/电表并行）</h3>
     <div style="font-size:13px;color:var(--ink2);line-height:2;margin-bottom:14px">
     对接厂商：<b>海康威视</b> · 覆盖园区 12 个门禁点位（宿舍楼出入口、厂房大门、写字楼大堂）。<br>
-    对接能力：人员权限按租约自动下发 / 退租自动回收，开门记录回传，欠费租户门禁策略联动（可选）。</div>
+    对接能力：人员权限按租约自动下发 / 退租自动回收，开门记录回传。<br>
+    <span style="color:var(--green);font-weight:600">门禁策略（R-18 业主确认）：不做欠费联动限制，仅按租约下发/回收权限；支持管理员手动关闭/恢复单个租户门禁，操作留痕。</span></div>
     ${table([{t:'对接项',k:'name'},{t:'厂商',k:'vendor'},{t:'状态',r:r=>badge(r.status, r.status==='对接中'?'cyan':'gray')},{t:'说明',k:'note'}], DB.api.door)}
   </div>
   <div class="card"><h3>门禁点位</h3>
@@ -471,8 +491,27 @@ PC.reg('/api/door','门禁对接', (el)=>{
       {p:'1 号宿舍楼 东门',m:'DS-K1T671M',o:'在线',n:486,u:212},{p:'2 号宿舍楼 北门',m:'DS-K1T671M',o:'在线',n:392,u:188},
       {p:'3 号厂房 大门',m:'DS-K5604-Z',o:'在线',n:167,u:96},{p:'创新大厦 大堂',m:'DS-K1T671M',o:'在线',n:1124,u:420},
       {p:'园区 南门人行',m:'DS-K5604-Z',o:'在线',n:2380,u:916}])}
+  </div>
+  <div class="card"><h3>租户门禁权限（手动关闭 / 恢复）</h3>
+    <div style="font-size:12.5px;color:var(--ink3);margin-bottom:10px">仅特殊场景手动干预（如安全隐患、司法协查），每次操作必填原因并写入审计日志；欠费租户<b>不自动</b>限制门禁。</div>
+    ${table([
+      {t:'租户',k:'t'},{t:'房源',k:'r'},{t:'权限来源',r:r=>badge(r.src,'blue')},{t:'状态',r:r=>badge(r.st, r.st==='正常'?'green':'red')},
+      {t:'操作',r:r=>r.st==='正常'
+        ?`<button class="btn sm danger" onclick="PC.doorToggle('${r.t}',1)">手动关闭</button>`
+        :`<button class="btn sm pri" onclick="PC.doorToggle('${r.t}',0)">恢复权限</button>`}
+    ],[
+      {t:'鑫源电子科技', r:'3 号厂房 301', src:'租约下发', st:'正常'},
+      {t:'王强（宿舍租户）', r:'1 号宿舍楼 406', src:'租约下发', st:'正常'},
+      {t:'恒泰物流', r:'仓库 W-102', src:'租约下发', st:'已手动关闭'}
+    ])}
   </div>`;
 });
+PC.doorToggle = function(name, close){
+  modal({title:(close?'⚠️ 手动关闭门禁':'恢复门禁权限')+' · '+name, size:'sm', body:`
+    <div class="frm">${fld('操作原因（必填，写入审计日志）', `<select class="ipt"><option>安全隐患临时管控</option><option>司法/公安协查</option><option>租户申请暂停</option><option>其他</option></select>`, true)}
+    ${fld('备注', `<input class="ipt" placeholder="补充说明">`)}</div>`,
+    footer:`<button class="btn" onclick="UI.close()">取消</button><button class="btn ${close?'danger':'pri'}" onclick="UI.close();UI.toast('已${close?'关闭':'恢复'} ${name} 门禁权限，操作已留痕')">${close?'确认关闭':'确认恢复'}</button>`});
+};
 PC.reg('/api/push','消息推送', (el)=>{
   el.innerHTML = `
   <div class="card">

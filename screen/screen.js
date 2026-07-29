@@ -20,15 +20,45 @@ function tick(){
 }
 setInterval(tick,1000); tick();
 
+// ===== 片区切换 + 轮播（R-15） =====
+let curArea = '';   // '' = 全部
+let carousel = false, carTimer = null;
+function renderTabs(){
+  const tabs = [{id:'', name:'全部片区'}].concat(DB.areas.map(a=>({id:a.id, name:a.name})));
+  document.getElementById('atabs').innerHTML =
+    tabs.map(t=>`<span class="at ${curArea===t.id?'on':''}" onclick="SCR_setArea('${t.id}')">${t.name}</span>`).join('') +
+    `<span class="car ${carousel?'on':''}" onclick="SCR_carousel()">${carousel?'⏸ 停止轮播':'▶ 轮播 15s'}</span>`;
+}
+window.SCR_setArea = function(aid){ curArea = aid; renderTabs(); renderKpis(); renderRoomBars(); };
+window.SCR_carousel = function(){
+  carousel = !carousel;
+  if(carousel){
+    const ids = [''].concat(DB.areas.map(a=>a.id));
+    let i = ids.indexOf(curArea);
+    carTimer = setInterval(()=>{ i=(i+1)%ids.length; SCR_setArea(ids[i]); }, 15000);
+  } else { clearInterval(carTimer); }
+  renderTabs();
+};
+renderTabs();
+
 // KPI
 let income = S.monthIncome;
 function renderKpis(){
+  const bills = curArea? DB.bills.filter(b=>DB.billArea(b)===curArea) : DB.bills;
+  const arr = (curArea? DB.receivables.filter(r=>r.area===curArea) : DB.receivables).filter(r=>r.status==='逾期');
+  const mts = curArea? DB.meters.filter(m=>m.area===curArea) : DB.meters;
+  const rooms = curArea? DB.rooms.filter(r=>r.area===curArea) : DB.rooms;
+  const rented = rooms.filter(r=>r.status==='已租'||r.status==='到期').length;
+  const rate = rooms.length? Math.round(rented/rooms.length*1000)/10 : 0;
+  const inc = bills.filter(b=>b.status==='已缴').reduce((a,b)=>a+b.amount,0) || income*10000;
+  const arrSum = arr.reduce((a,b)=>a+b.balance,0) || (curArea? 0 : S.arrearsTotal);
+  const online = mts.filter(m=>m.online).length;
   document.getElementById('kpis').innerHTML = [
-    ['本月总收入', `<span id="k-inc">${money(income*10000)}</span> <small>元</small>`, '同比 <b class="up">+12.4%</b>'],
-    ['综合出租率', S.rentRate+'<small>%</small>', '车位 '+S.spotRate+'%'],
+    ['本月总收入'+(curArea?' · '+DB.areaName(curArea):''), `<span id="k-inc">${money(Math.round(inc))}</span> <small>元</small>`, '同比 <b class="up">+12.4%</b>'],
+    ['综合出租率', rate+'<small>%</small>', '车位 '+S.spotRate+'%'],
     ['回款率', '91.2<small>%</small>', '应收 105.7 万'],
-    ['欠费总额', money(S.arrearsTotal)+' <small>元</small>', '逾期 <b class="down">'+DB.receivables.filter(r=>r.status==='逾期').length+'</b> 笔'],
-    ['表计在线率', Math.round(S.metersOnline/S.meterTotal*100)+'<small>%</small>', S.metersOnline+' / '+S.meterTotal+' 块在线'],
+    ['欠费总额', money(arrSum)+' <small>元</small>', '逾期 <b class="down">'+arr.length+'</b> 笔'],
+    ['表计在线率', (mts.length?Math.round(online/mts.length*100):100)+'<small>%</small>', online+' / '+mts.length+' 块在线'],
   ].map(k=>`<div class="kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
 }
 renderKpis();
@@ -36,13 +66,16 @@ renderKpis();
 setInterval(()=>{ income += Math.random()*0.02; const e=document.getElementById('k-inc'); if(e) e.textContent = money(income*10000); }, 3000);
 
 // 房源状态条形
-(function(){
+function renderRoomBars(){
+  const pool = curArea? DB.rooms.filter(r=>r.area===curArea) : DB.rooms;
   const rows = [['公寓', catStat('公寓')], ['厂房', catStat('厂房')], ['写字楼', catStat('写字楼')], ['商业', catStat('商业')], ['其他', catStat('其他')]];
-  function catStat(c){ const rs=DB.rooms.filter(r=>r.cat===c); const r=rs.filter(x=>x.status==='已租'||x.status==='到期').length; return {t:rs.length, r, p: rs.length?Math.round(r/rs.length*100):0}; }
+  function catStat(c){ const rs=pool.filter(r=>r.cat===c); const r=rs.filter(x=>x.status==='已租'||x.status==='到期').length; return {t:rs.length, r, p: rs.length?Math.round(r/rs.length*100):0}; }
   document.getElementById('roomBars').innerHTML = rows.map(([n,v])=>
     `<div class="bar-row"><span class="bl">${n}</span><span class="bt"><i style="width:${v.p}%"></i></span><span class="bv">${v.p}%</span><span class="mini">${v.r}/${v.t}</span></div>`).join('');
-  document.getElementById('roomNote').textContent = `空置 ${S.vacant} · 即将到期 ${S.expire} · 维修 ${S.repair} · 预定 ${S.booked}`;
-})();
+  document.getElementById('roomNote').textContent =
+    (curArea? DB.areaName(curArea)+' · ' : '') + `空置 ${pool.filter(r=>r.status==='空置').length} · 即将到期 ${pool.filter(r=>r.status==='到期').length} · 维修 ${pool.filter(r=>r.status==='维修').length} · 预定 ${pool.filter(r=>r.status==='预定').length}`;
+}
+renderRoomBars();
 
 // 园区分布图（抽象地图点位）
 (function(){

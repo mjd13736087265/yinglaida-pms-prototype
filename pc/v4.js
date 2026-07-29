@@ -435,7 +435,7 @@ PC.reg('/fin/invoice','发票管理', (el)=>{
       {t:'操作',w:'170px',r:r=>r.status==='待开具'
         ? `<button class="btn sm pri" onclick="PC.invoiceIssue('${r.id}')">开具</button><button class="btn sm ghost" onclick="UI.toast('已驳回申请')">驳回</button>`
         : r.status==='已开具'
-        ? `<button class="btn sm ghost" onclick="UI.toast('发票 PDF 下载中')">下载</button><button class="btn sm ghost" onclick="UI.confirm('红冲确认','确认对发票 ${r.id} 进行红冲？红冲后需重新开具。','UI.toast(\\'红冲申请已提交审核\\')')">红冲</button>`
+        ? `<button class="btn sm ghost" onclick="UI.toast('发票 PDF 下载中')">下载</button><button class="btn sm ghost" onclick="UI.confirm('红冲确认','确认对发票 ${r.id} 进行红冲？红冲申请将推送至外部 OA 审批，审批通过后自动执行红冲并需重新开具。','UI.toast(\\'红冲申请已推送外部 OA 审批\\')')">红冲</button>`
         : `<button class="btn sm ghost" onclick="PC.invoiceDetail('${r.id}')">详情</button>`}
     ], inv)}
   </div>`;
@@ -447,6 +447,7 @@ PC.invoiceIssue = function(id){
     ${fld('税号', `<input class="ipt" value="${i.taxno||'（个人抬头无需税号）'}">`)}
     ${fld('票种', `<select class="ipt"><option>${i.kind}</option></select>`)}
     ${fld('开票金额', `<input class="ipt" value="¥${money(i.amount)}" disabled>`)}
+    ${fld('税率', `<select class="ipt"><option>不动产租赁 9%（一般计税）</option><option>不动产租赁 5%（简易计税）</option><option>水电转售 13%</option></select><div class="hint">按费用类型自动带出，可在开票设置中维护税率表</div>`)}
     ${fld('税收分类编码', `<select class="ipt"><option>304050202 不动产经营租赁服务</option><option>110101 供电</option><option>110103 供水</option></select><div class="hint">按费用类型自动匹配</div>`)}
     ${fld('接收邮箱/手机', `<input class="ipt" value="tenant@example.com">`, true)}
     ${fld('备注', `<input class="ipt" placeholder="发票备注栏内容">`, true)}
@@ -462,18 +463,28 @@ PC.invoiceDetail = function(id){
 };
 PC.invoiceNew = function(){
   modal({title:'代客开票', body:`<div class="frm">
-    ${fld('选择已缴账单', `<select class="ipt">${DB.bills.filter(b=>b.status==='已缴').slice(0,6).map(b=>`<option>${b.id}（${b.tname} ${b.type} ¥${money(b.amount)}）</option>`).join('')}</select>`, true)}
+    ${fld('选择已缴账单', `<select class="ipt">${DB.bills.filter(b=>b.status==='已缴').slice(0,6).map(b=>`<option>${b.id}（${b.tname} ${b.type} ¥${money(b.amount)}）</option>`).join('')}</select><div class="hint">已开过票的账单自动隐藏，防止重复开票；红冲后的账单可重新选择</div>`, true)}
     ${fld('抬头类型', `<select class="ipt"><option>企业</option><option>个人</option></select>`)}
     ${fld('发票抬头', `<input class="ipt">`, false, true)}
     ${fld('税号', `<input class="ipt">`)}
   </div>`, footer:`<button class="btn" onclick="UI.close()">取消</button><button class="btn pri" onclick="UI.close();UI.toast('开票申请已创建')">提交</button>`});
 };
 PC.invoiceSetting = function(){
-  modal({title:'开票设置', body:`<div class="frm">
+  modal({title:'开票设置', size:'lg', body:`<div class="frm">
     ${fld('开票主体', `<input class="ipt" value="英莱达产业发展有限公司">`, true)}
     ${fld('税号', `<input class="ipt" value="91330100MA2XXXXXX8">`)}
     ${fld('开票平台', `<select class="ipt"><option>百望云（已对接）</option><option>航天信息</option><option>税务 UKey 手工开具</option></select>`)}
     ${fld('自动交付', `<select class="ipt"><option>开具后自动发送邮箱+小程序</option><option>仅小程序</option></select>`)}
-  </div>`, footer:`<button class="btn" onclick="UI.close()">取消</button><button class="btn pri" onclick="UI.close();UI.toast('开票设置已保存')">保存</button>`});
+  </div>
+  <h4 style="margin:14px 0 8px">税率配置（按费用类型）</h4>
+  ${table([
+    {t:'费用类型',k:'f'},{t:'税收分类编码',k:'c'},{t:'默认税率',k:'r'},{t:'计税方式',k:'m'},{t:'操作',r:r=>`<button class="btn sm ghost" onclick="UI.toast('税率已更新')">调整</button>`}
+  ],[
+    {f:'租金 / 物业费', c:'304050202 不动产经营租赁服务', r:'9%', m:'一般计税'},
+    {f:'老项目租金（2016 前取得）', c:'304050202', r:'5%', m:'简易计税'},
+    {f:'电费转售', c:'110101 供电', r:'13%', m:'一般计税'},
+    {f:'水费转售', c:'110103 供水', r:'9%', m:'一般计税'},
+    {f:'停车费', c:'304050203 车辆停放服务', r:'9%', m:'一般计税'}])}`,
+  footer:`<button class="btn" onclick="UI.close()">取消</button><button class="btn pri" onclick="UI.close();UI.toast('开票设置已保存')">保存</button>`});
 };
 })();

@@ -98,6 +98,7 @@ window.DB = (function(){
       rent:r.cat==='厂房'||r.cat==='其他'? r.rent*r.size : r.rent,
       unit:(r.cat==='厂房'||r.cat==='其他')?'元/㎡·月':'元/月',
       deposit:r.deposit, cycle:pick(['月付','季付','季付','年付']),
+      freeDays:(r.cat==='厂房'||r.cat==='写字楼')? pick([0,15,30,30,60]) : 0,
       status:r.status==='到期'?'即将到期':'履约中', sign:'电子签章'
     });
   });
@@ -340,11 +341,64 @@ window.DB = (function(){
   stats.rentRate = Math.round(stats.rented/stats.roomTotal*1000)/10;
   stats.spotRate = Math.round(stats.spotRented/stats.spotTotal*1000)/10;
 
+  // 押金台账（R-08）
+  const deposits = [];
+  contracts.filter(c=>c.deposit && c.cat!=='车位').slice(0,14).forEach((c,i)=>{
+    const st = i%7===3? pick(['退还审批中','已退','部分扣款']) : '在押';
+    deposits.push({
+      id:'YJ'+String(7000+i), tenant:c.tname, room:c.roomName, contract:c.id, area:c.area,
+      amount:c.deposit, collectTime:c.start, status:st,
+      deduct: st==='部分扣款'? ri(2,8)*100 : 0,
+      refundTime: st==='已退'? '2026-07-'+String(ri(10,28)).padStart(2,'0') : null,
+      channel: pick(['微信支付','银行转账'])
+    });
+  });
+
+  // 数据字典（R-02 · 全局唯一枚举来源，各模块引用同一字典）
+  const dict = {
+    房屋状态:['空置','已租','到期','维修','预定'],
+    酒店房态:['空净','在住','脏房','维修','已租','空置'],
+    表计状态:['在线','掉线'], 表计性质:['独用','公摊'], 计费模式:['预付费','后付费'],
+    账单状态:['待缴','已缴','逾期','部分核销','已核销'],
+    费用类型:['租金','电费','水费','车位费','物业费','其他'],
+    工单状态:['待派单','处理中','已完成','已评价'],
+    合同状态:['履约中','即将到期','已到期','已退租'],
+    押金状态:['在押','退还审批中','已退','部分扣款'],
+    票据类型:['增值税普通发票（电子）','增值税专用发票'],
+    审批状态:['待审批','已通过','已驳回','已推送外部OA']
+  };
+
+  // 合同模板（R-10 · 按业态配置，电子签章变量自动带入）
+  const contractTpls = [
+    {cat:'宿舍（公寓）', ver:'V3.2', vars:['{{租户姓名}}','{{房号}}','{{月租金}}','{{押金}}','{{租期}}','{{免租期}}'], note:'含物品交接清单附件、门禁使用条款'},
+    {cat:'厂房', ver:'V2.8', vars:['{{企业名称}}','{{面积}}','{{单价元㎡}}','{{免租装修期}}','{{消防责任}}'], note:'含安全生产责任书、装修管理协议'},
+    {cat:'写字楼', ver:'V2.1', vars:['{{企业名称}}','{{房号}}','{{月租金}}','{{物业费}}'], note:'含装修押金条款'},
+    {cat:'商业', ver:'V1.9', vars:['{{商户名称}}','{{铺号}}','{{营业额抽成}}','{{装修期}}'], note:'支持固定租金/抽成两种模式'},
+    {cat:'车位', ver:'V1.5', vars:['{{租户}}','{{车位号}}','{{月租金}}','{{车牌号}}'], note:'含道闸使用协议'},
+    {cat:'酒店长包房', ver:'V1.2', vars:['{{企业名称}}','{{房号}}','{{月包价}}','{{餐费条款}}'], note:'协议单位挂账条款'},
+  ];
+
+  // 欠费联动策略（R-05 · 可配置自动断闸或缓冲时长，默认手动）
+  const strategy = {
+    mode:'手动分闸（默认）', autoBreak:false, bufferHours:48, overdraft:20,
+    notify:['微信模板消息','小程序站内信'], secondConfirm:true, logAll:true,
+    remindDays:[1,3,7], note:'欠费提醒按逾期 1/3/7 天自动推送；余额低于阈值即时推送充值提醒'
+  };
+
+  // 上线初始化批次（R-16）
+  const initBatches = [
+    {item:'在租合同', tpl:'合同导入模板.xlsx', rows:186, ok:186, diff:0, status:'已核对'},
+    {item:'租户档案', tpl:'租户导入模板.xlsx', rows:212, ok:212, diff:0, status:'已核对'},
+    {item:'历史欠费', tpl:'欠费导入模板.xlsx', rows:23, ok:23, diff:0, status:'已核对'},
+    {item:'表计底数', tpl:'表计底数模板.xlsx', rows:82, ok:80, diff:2, status:'待处理'},
+    {item:'押金余额', tpl:'押金导入模板.xlsx', rows:186, ok:186, diff:0, status:'已核对'},
+  ];
+
   const areaName = id => (areas.find(a=>a.id===id)||{}).name || '-';
   const billArea = b => { const c = contracts.find(c=>c.id===b.contract); return c? c.area : null; };
 
   return {areas, buildings, lots, rooms, spots, tenants, contracts, bills, meters, readings,
     orders, complaints, assets, receivables, payables, collections, approvals, messages,
     incomeByMonth, months, api, plans, stats, hotelRates, hotelRooms, invoices, pick, ri,
-    areaName, billArea};
+    areaName, billArea, deposits, dict, contractTpls, strategy, initBatches};
 })();

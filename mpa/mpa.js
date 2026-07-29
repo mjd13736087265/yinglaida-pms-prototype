@@ -45,7 +45,7 @@ work(){
   <div class="mcard"><h4>管理功能</h4>
     <div class="mgrid">
       ${[['🏢','产业管理','estateHub'],['💰','收租管理','rentHub'],['📄','合同管理','contractHub'],['💧','水电管理','waterHub'],
-         ['🔧','物业报修','orders'],['📈','数据报表','reportHub'],['✅','审批中心','approval'],['🗺️','片区切换','areaSwitch']].map(([i,t,p])=>
+         ['🔧','物业报修','orders'],['🧹','客房清扫','housekeeping'],['📈','数据报表','reportHub'],['✅','审批中心','approval'],['🗺️','片区切换','areaSwitch']].map(([i,t,p])=>
         `<div class="g" onclick="MA.push('${p}')"><div class="gi" style="background:#f0f4fd">${i}</div><div class="gt">${t}</div></div>`).join('')}
     </div>
   </div>
@@ -54,6 +54,33 @@ work(){
     <div class="mrow" onclick="MA.push('alarms')"><div class="ic" style="background:var(--${a[2]==='red'?'red':a[2]==='orange'?'orange':'blue'}-bg)">${{欠费:'⏰',合同:'📄',报修:'🔧',审批:'✅',用量:'⚡'}[a[0]]}</div>
     <div class="tx"><div class="tt" style="font-size:13px">${a[1]}</div><div class="ts">${a[0]}预警 · 刚刚</div></div><span class="ar">›</span></div>`).join('')}
   </div>`;
+},
+
+/* ================= 客房清扫任务（R-12 酒店退房→清扫→空净闭环） ================= */
+housekeeping(){
+  const tasks = [
+    {no:'8601', type:'大床房', st:'待清扫', out:'今日 12:40 退房', cleaner:'—'},
+    {no:'8603', type:'双床房', st:'清扫中', out:'今日 11:05 退房', cleaner:'王秀兰', since:'13:20 开始'},
+    {no:'8506', type:'套房',   st:'待质检', out:'昨日 18:20 退房', cleaner:'李桂芳', since:'已完成清扫 12:10'},
+    {no:'8502', type:'大床房', st:'已转空净', out:'昨日 12:10 退房', cleaner:'王秀兰', since:'质检通过 10:40'}
+  ];
+  const c = {待清扫:'red', 清扫中:'cyan', 待质检:'orange', 已转空净:'green'};
+  body().innerHTML = navBar('客房清扫任务') + `
+  <div class="mcard" style="display:flex;gap:10px;text-align:center">
+    ${[['待清扫',2,'red'],['清扫中',1,'cyan'],['待质检',1,'orange'],['今日转空净',6,'green']].map(([l,n,cc])=>`
+    <div style="flex:1"><div style="font-size:22px;font-weight:800;color:var(--${cc})">${n}</div><div style="font-size:11px;color:var(--ink3)">${l}</div></div>`).join('')}
+  </div>
+  ${tasks.map(t=>`<div class="mcard">
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+      <b>${t.no} · ${t.type}</b>${badge(t.st, c[t.st])}</div>
+    <div style="font-size:12px;color:var(--ink3)">${t.out} · 清扫员：${t.cleaner}${t.since?' · '+t.since:''}</div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      ${t.st==='待清扫'?`<button class="btn sm pri" onclick="UI.toast('已接单并开始清扫 ${t.no}')">接单开始清扫</button>`:''}
+      ${t.st==='清扫中'?`<button class="btn sm pri" onclick="UI.toast('清扫完成，拍照上传 3 张，待质检')">清扫完成（拍照上传）</button>`:''}
+      ${t.st==='待质检'?`<button class="btn sm pri" onclick="UI.toast('质检通过，${t.no} 已转空净并可开房')">质检通过转空净</button><button class="btn sm danger" onclick="UI.toast('已打回重新清扫')">质检打回</button>`:''}
+      ${t.st==='已转空净'?`<span style="font-size:12px;color:var(--green)">✓ 已同步前台可售</span>`:''}
+    </div></div>`).join('')}
+  <div style="font-size:11px;color:var(--ink3);text-align:center;padding:6px 0 16px">PC 端退房结账后自动生成清扫任务 · 状态实时同步房态图</div>`;
 },
 
 /* ================= 产业 Tab（选择业态） ================= */

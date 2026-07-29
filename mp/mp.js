@@ -123,7 +123,7 @@ bill(id){
     ${(isE||isW)? `
       <div class="mrow" style="cursor:default"><div class="tx">本期用量（独用表）</div><b>${(b.amount/ (isE?0.85:3.2)).toFixed(1)} ${isE?'kWh':'m³'}</b></div>
       <div class="mrow" style="cursor:default"><div class="tx">单价</div><b>${isE?'0.85 元/kWh（峰平谷加权）':'3.20 元/m³'}</b></div>
-      <div class="mrow" style="cursor:default"><div class="tx">公摊分摊</div><b>¥${money(b.amount*0.18)}</b></div>`
+      <div class="mrow" onclick="MP.push('shareDetail','${b.id}')"><div class="tx">公摊分摊 <span style="font-size:11px;color:var(--primary)">计算过程公示 ›</span></div><b>¥${money(b.amount*0.18)}</b></div>`
     : `<div class="mrow" style="cursor:default"><div class="tx">${b.type}（${b.month}）</div><b>¥${money(b.amount)}</b></div>`}
     <div class="mrow" style="cursor:default"><div class="tx">关联合同</div><span style="font-size:13px">${b.contract}</span></div>
   </div>
@@ -132,6 +132,55 @@ bill(id){
     <button class="mbtn line" style="margin-top:10px" onclick="UI.toast('凭证 PDF 已保存到相册')">下载缴费凭证</button>
     <button class="mbtn" style="margin-top:10px" onclick="MP.push('invoice','${b.id}')">🧾 申请开票</button></div>`
   : `<div style="padding:12px"><button class="mbtn" onclick="MP.push('pay','${b.id}')">立即缴费</button></div>`}`;
+},
+shareDetail(id){
+  const b = DB.bills.find(x=>x.id===id);
+  const share = b.amount*0.18;
+  body().innerHTML = navBar('公摊分摊计算公示') + `
+  <div class="mcard" style="text-align:center;padding:20px">
+    <div style="font-size:12px;color:var(--ink3)">${b.month} ${b.type} · 您的公摊金额</div>
+    <div style="font-size:28px;font-weight:800;margin:8px 0">¥${money(share)}</div>
+    <span class="badge b-blue">计算过程全公示</span>
+  </div>
+  <div class="mcard"><h4>计算公式</h4>
+    <div style="font-size:13px;color:var(--ink2);line-height:2;background:#f7f9fd;border-radius:8px;padding:12px">
+    您的公摊 = 公摊总费用 ×（您的独用用量 ÷ 全楼独用总用量）<br>
+    = ¥${money(share/0.124)} ×（${(b.amount*0.124).toFixed(1)} ÷ ${(b.amount).toFixed(1)}）<br>
+    = <b>¥${money(share)}</b></div>
+  </div>
+  <div class="mcard"><h4>公摊费用构成（${b.month}）</h4>
+    ${[['公区照明与电梯用电','¥1,862.40'],['水泵与二次供水','¥640.00'],['园区景观与路灯','¥318.60']].map(([n,a])=>`
+    <div class="mrow" style="cursor:default"><div class="tx">${n}</div><b>${a}</b></div>`).join('')}
+  </div>
+  <div class="mcard"><h4>分摊规则</h4>
+    ${timeline([
+      {t:'规则依据',d:'物业服务合同第 7 条 · 按独用表用量比例分摊',act:true},
+      {t:'数据采集',d:'公区总表与全楼独用表均来自智能表计自动抄表',act:true},
+      {t:'公示期',d:'账单生成后公示 7 天，异议可在线提交复核',act:true}])}
+    <button class="mbtn line" style="margin-top:10px" onclick="UI.toast('异议已提交，客服将在 1 个工作日内联系您')">我对公摊有异议</button>
+  </div>`;
+},
+deposit(){
+  const stepsOf = d=>{
+    const s = [{t:'押金收取', d:(d.collectTime||'-')+' · '+d.channel, act:true}];
+    if(d.status==='在押'){ s.push({t:'押金在押', d:'由监管账户专户存管，退租结算后原路退回', act:true}); }
+    if(d.status==='退还审批中'){ s.push({t:'退租结算完成', d:'费用核对无误', act:true},{t:'退款审批中', d:'已推送外部 OA 审批，预计 3 个工作日内到账', act:false}); }
+    if(d.status==='已退'){ s.push({t:'退租结算完成', d:'费用核对无误', act:true},{t:'押金已退还', d:d.refundTime+' · 原路退回 '+d.channel, act:true}); }
+    if(d.status==='部分扣款'){ s.push({t:'退租结算完成', d:'物品损坏扣款 ¥'+money(d.deduct), act:true},{t:'余额已退还', d:'退还 ¥'+money(d.amount-d.deduct)+' · '+(d.refundTime||'处理中'), act:!!d.refundTime}); }
+    return s;
+  };
+  const stColor = {'在押':'blue','退还审批中':'orange','已退':'green','部分扣款':'red'};
+  body().innerHTML = navBar('押金查询') + `
+  ${DB.deposits.slice(0,3).map(d=>`
+  <div class="mcard">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <b>${d.room}</b>${badge(d.status, stColor[d.status])}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;color:var(--ink3)">合同 ${d.contract}</span>
+      <b style="font-size:20px">¥${money(d.amount)}</b></div>
+    <div style="margin-top:12px"><h4 style="margin-bottom:8px">押金进度</h4>
+    ${timeline(stepsOf(d))}
+    </div></div>`).join('')}`;
 },
 pay(id){
   const list = id? myBills.filter(b=>b.id===id) : myBills.filter(b=>b.status!=='已缴');
@@ -382,8 +431,8 @@ me(){
     <div style="font-size:12px;opacity:.85;margin-top:3px">${ME.phone||'138****8888'} · ${myContracts[0].roomName}</div></div>
   </div>
   <div class="mcard">
-    ${[['👤','信息管理','姓名、证件、常住人员维护'],['🔐','账号安全','重置登录密码、修改绑定手机号'],['🏠','常住成员','家庭成员/企业员工管理'],['📄','我的合同','查看全部租赁合同'],['🧾','开票记录','已缴账单在线开票'],['⭐','我的评价','报修与投诉评价记录'],['❓','帮助中心','常见问题与客服']].map(([i,t,s],idx)=>`
-    <div class="mrow" onclick="MP.push('setting','${t}')"><div class="ic" style="background:#f1f3f9">${i}</div><div class="tx"><div class="tt">${t}</div><div class="ts">${s}</div></div><span class="ar">›</span></div>`).join('')}
+    ${[['👤','信息管理','姓名、证件、常住人员维护'],['🔐','账号安全','重置登录密码、修改绑定手机号'],['🏠','常住成员','家庭成员/企业员工管理'],['📄','我的合同','查看全部租赁合同'],['💰','押金查询','押金金额与退还进度'],['🧾','开票记录','已缴账单在线开票'],['⭐','我的评价','报修与投诉评价记录'],['❓','帮助中心','常见问题与客服']].map(([i,t,s],idx)=>`
+    <div class="mrow" onclick="${t==='押金查询'?`MP.push('deposit')`:`MP.push('setting','${t}')`}"><div class="ic" style="background:#f1f3f9">${i}</div><div class="tx"><div class="tt">${t}</div><div class="ts">${s}</div></div><span class="ar">›</span></div>`).join('')}
   </div>
   <div style="padding:12px"><button class="mbtn gray" onclick="UI.toast('已退出登录（演示）')">退出登录</button></div>
   <div style="text-align:center;font-size:11px;color:var(--ink3);padding:8px 0 20px">英莱达智慧园区 v1.0.0</div>`;

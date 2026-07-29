@@ -202,8 +202,8 @@ PC.contract = function(id){
       <button class="btn sm" onclick="UI.toast('已发送续租提醒')">续租提醒</button></span>
     </div>
     ${desc([['承租方',c.tname],['租赁标的',c.roomName],['所属片区',DB.areas.find(a=>a.id===c.area)?.name||'-'],
-      ['租赁期限',`${c.start} ~ ${c.end}`],['租金标准',`¥${money(c.rent)} ${c.unit}`],['押金',`¥${money(c.deposit)}`],
-      ['付款周期',c.cycle],['签署方式',c.sign],['账单生成','每月 1 日自动生成']])}
+      ['租赁期限',`${c.start} ~ ${c.end}`],['免租期（装修期）', c.freeDays? c.freeDays+' 天（免租期内不出租金账单）':'无'],['租金标准',`¥${money(c.rent)} ${c.unit}`],['押金',`¥${money(c.deposit)}`],
+      ['付款周期',c.cycle],['签署方式',c.sign],['账单生成','每月 1 日自动生成（自动跳过免租期月份）']])}
     <h3 style="margin:18px 0 10px;font-size:14px">合同条款（摘要）</h3>
     <div class="card" style="background:#fafbfe;font-size:13px;line-height:2;color:var(--ink2)">
       一、甲方将 ${c.roomName} 出租给乙方使用，租期自 ${c.start} 至 ${c.end}。<br>

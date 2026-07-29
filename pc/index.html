@@ -18,7 +18,7 @@
       <div class="right">
         <span style="cursor:pointer" onclick="location.hash='#/screen-entry'">📊 驾驶舱大屏</span>
         <span class="bell" onclick="PC.notices()">🔔<i>6</i></span>
-        <span id="area-switch" style="cursor:pointer" title="切换片区数据范围">📍 全部片区 ▾</span>
+        <span id="area-switch" style="cursor:pointer" onclick="PC.scopeMenu()" title="数据权限视角：不同角色可见不同片区">📍 全部片区 ▾</span>
         <div class="avatar" title="陈志远 · 片区经理">陈</div>
       </div>
     </div>
@@ -33,6 +33,7 @@
 <script src="v3.js"></script>
 <script src="v4.js"></script>
 <script src="v5.js"></script>
+<script src="v6.js"></script>
 <script>PC.start();</script>
 </body>
 </html>

@@ -82,6 +82,15 @@ PC.roomDetail = function(id){
       ['租金标准',rentText],['配套设施', r.cat==='公寓'?'空调、热水器、独立卫浴、宽带': r.cat==='厂房'?'行车、380V动力电、卸货平台':'精装修、中央空调、独立电表'],
       ['当前租户', r.tname? `<span class="lk" onclick="PC.tenant('${r.tname}')">${r.tname}</span>`:'—'],
       ['合同到期', r.endDate||'—'],['押金', r.deposit? '¥'+money(r.deposit):'—'],['电表/水表', myMeters.length? myMeters.map(m=>`<span class="lk" onclick="PC.meterDetail('${m.id}')">${m.type.slice(0,1)}表 ${m.no.slice(-6)}</span>`).join(' '):'未绑定']],3)}
+    ${(r.cat==='公寓' && PC._bedMode)?`<h3 style="font-size:14px;margin:16px 0 10px">床位管理 <span style="font-size:12px;color:var(--ink3);font-weight:normal">（已在「功能开关」中启用床位模式）</span></h3>
+    ${table([
+      {t:'床位',k:'b'},{t:'状态',r:x=>badge(x.st, x.st==='在住'?'blue':x.st==='空置'?'green':'orange')},{t:'住户',k:'p'},{t:'月租',k:'rent'},{t:'租期至',k:'end'},
+      {t:'操作',r:x=>x.st==='空置'?`<button class="btn sm pri" onclick="UI.toast('床位入住办理（演示）')">安排入住</button>`:`<button class="btn sm ghost" onclick="UI.toast('床位调/退（演示）')">调换/退床</button>`}
+    ],[
+      {b:'A 床（下铺）', st:'在住', p:'马涛', rent:'¥750/月', end:'2026-12-31'},
+      {b:'B 床（上铺）', st:'在住', p:'刘志强', rent:'¥650/月', end:'2027-03-31'},
+      {b:'C 床（下铺）', st:'空置', p:'—', rent:'¥750/月', end:'—'},
+      {b:'D 床（上铺）', st:'预定', p:'周新（已交定金）', rent:'¥650/月', end:'—'}])}`:''}
     ${r.cat==='厂房'?`<h3 style="font-size:14px;margin:16px 0 10px">厂房技术参数</h3>
     ${desc([['层高','8 m'],['地面承重','1 t/㎡'],['电力容量','250 kVA'],['消防等级','丙类'],['电梯','2 吨货梯 × 2'],['行车','10 t × 1']],3)}
     <h3 style="font-size:14px;margin:16px 0 10px">实景图片 / 视频（在线看房）</h3>
@@ -110,16 +119,19 @@ PC.roomEdit = function(id){
 
 /* ---------- 房源列表 ---------- */
 function estateList(el, cat){
-  const rs = catRooms(cat);
+  const scope = PC.getScope? PC.getScope() : '';
+  const rs = catRooms(cat).filter(r=>!scope || r.area===scope);
   el.innerHTML = `<div class="card">
+    ${scope?`<div style="background:var(--blue-bg);border:1px solid #c2d5fb;border-radius:8px;padding:8px 14px;font-size:12.5px;color:var(--blue);margin-bottom:14px">🔒 数据权限视角：仅显示 <b>${DB.areaName(scope)}</b> 的房源（由角色数据权限控制，顶栏可切换）</div>`:''}
     <div class="toolbar">
       <input class="ipt" placeholder="房号 / 租户" style="width:150px" onkeydown="if(event.key==='Enter')UI.toast('查询成功（演示）')">
-      <select class="ipt" id="es-area" onchange="PC.estateFilter('${cat}')"><option value="">全部片区</option>${DB.areas.filter(a=>DB.buildings.some(b=>b.area===a.id&&b.cat===cat)).map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select>
+      <select class="ipt" id="es-area" onchange="PC.estateFilter('${cat}')"><option value="">全部片区</option>${DB.areas.filter(a=>DB.buildings.some(b=>b.area===a.id&&b.cat===cat)).map(a=>`<option value="${a.id}" ${scope===a.id?'selected':''}>${a.name}</option>`).join('')}</select>
       <select class="ipt"><option>全部楼栋</option>${DB.buildings.filter(b=>b.cat===cat).map(b=>`<option>${b.name}</option>`).join('')}</select>
       <select class="ipt"><option>全部状态</option><option>空置</option><option>已租</option><option>到期</option><option>维修</option><option>预定</option></select>
       <button class="btn" onclick="UI.toast('查询成功（演示）')">查询</button>
       <span class="sp"></span>
       <button class="btn" onclick="UI.toast('房源台账已导出')">导出</button>
+      <button class="btn" onclick="PC.roomBatch('${cat}')">批量建档</button>
       <button class="btn pri" onclick="PC.roomAdd('${cat}')">＋ 新增房源</button>
     </div>
     <div id="es-tb">${estateTable(cat, rs)}</div>
@@ -210,6 +222,7 @@ PC.checkin = function(){
       ${fld('证件号码', `<input class="ipt" placeholder="身份证 / 统一社会信用代码（支持 OCR 识别上传）">`, true)}
       ${fld('紧急联系人', `<input class="ipt">`)}
       ${fld('租期', `<select class="ipt"><option>12 个月</option><option>6 个月</option><option>24 个月</option></select>`)}
+      ${fld('免租期（装修期）', `<select class="ipt"><option>无</option><option>15 天</option><option selected>30 天</option><option>60 天</option><option>90 天</option></select>`)}
       ${fld('付款周期', `<select class="ipt"><option>月付</option><option>季付</option><option>年付</option></select>`)}
       ${fld('起租日期', `<input class="ipt" type="date" value="2026-08-01">`)}
       ${fld('押金', `<input class="ipt" value="¥ 2,000（押一）">`)}
@@ -330,7 +343,9 @@ PC.genRentBills = function(cat){
     ${fld('生成范围', `<select class="ipt"><option>全部履约中合同（${DB.contracts.filter(c=>c.cat===cat).length} 份）</option><option>指定楼栋</option></select>`, true)}
     ${fld('账单周期', `<select class="ipt"><option>按合同约定（月付/季付/年付）</option><option>统一月付</option></select>`, true)}
     ${fld('优惠折扣', `<input class="ipt" placeholder="如：老租户 98 折（可留空）">`, true)}
-  </div>`, footer:`<button class="btn" onclick="UI.close()">取消</button><button class="btn pri" onclick="UI.close();UI.toast('账单生成完成并已推送租户')">生成并推送</button>`});
+    ${fld('免租期处理', `<select class="ipt"><option>自动跳过免租期（装修期）内的月份，不出账单</option><option>免租期出 0 元账单留档</option></select>`, true)}
+  </div>
+  <div style="font-size:12.5px;color:var(--ink3);line-height:1.8;margin-top:4px">说明：合同含免租期的租户，系统在免租期内不计租金账单；免租期结束次月自动恢复出账，到期合同自动停出。</div>`, footer:`<button class="btn" onclick="UI.close()">取消</button><button class="btn pri" onclick="UI.close();UI.toast('账单生成完成并已推送租户')">生成并推送</button>`});
 };
 
 /* ---------- 厂房：图形化编辑器 / 定价 / 销售 ---------- */
@@ -479,7 +494,7 @@ PC.hotelRoom = function(id){
       <span style="margin-left:auto;display:flex;gap:8px">
         ${(r.status==='空净'||r.status==='空置')?`<button class="btn sm pri" onclick="PC.hotelCheckin('${r.id}')">开房</button>`:''}
         ${(r.status==='在住')?`<button class="btn sm" onclick="UI.toast('续住成功，已更新离店时间')">续住</button><button class="btn sm danger" onclick="PC.hotelCheckout('${r.id}')">退房结账</button>`:''}
-        ${r.status==='脏房'?`<button class="btn sm pri" onclick="UI.toast('已通知客房部清扫，完成后转空净')">安排清扫</button>`:''}
+        ${r.status==='脏房'?`<button class="btn sm pri" onclick="UI.toast('已推送清扫任务至客房管理端小程序')">安排清扫</button>`:''}
         ${r.status==='已租'?`<button class="btn sm" onclick="UI.toast('跳转长租合同')">长租合同</button>`:''}
       </span></div>
     ${desc([['房型',r.type],['经营模式',r.mode],['门市价',r.price],
@@ -508,11 +523,13 @@ PC.hotelCheckin = function(roomId){
 PC.hotelCheckout = function(id){
   const r = DB.hotelRooms.find(x=>x.id===id);
   modal({title:'退房结账 · '+r.no, body:`
-    ${table([{t:'项目',k:'n'},{t:'金额',r:x=>'¥'+x.a}],[
-      {n:'房费',a:r.mode==='钟点'?'68.00':'228.00'},{n:'迷你吧消费',a:'18.00'},{n:'押金退还',a:'-200.00'}])}
-    <div style="text-align:right;font-size:15px;margin-top:10px">应收合计：<b style="color:var(--red)">¥46.00</b>（押金抵扣后）</div>
+    ${table([{t:'项目',k:'n'},{t:'金额',r:x=>'¥'+x.a},{t:'说明',k:'d'}],[
+      {n:'房费',a:r.mode==='钟点'?'68.00':'228.00',d:r.mode==='钟点'?'4 小时钟点价':'1 晚'},
+      {n:'超时加收',a:'34.00',d:r.mode==='钟点'?'超时 2 小时 × ¥17/小时（按钟点超时规则）':'超时退房 14:20 离店，按半日房费折算'},
+      {n:'迷你吧消费',a:'18.00',d:'—'},{n:'押金退还',a:'-200.00',d:'原路退回'}])}
+    <div style="text-align:right;font-size:15px;margin-top:10px">应收合计：<b style="color:var(--red)">¥80.00</b>（押金抵扣后）</div>
     <div class="frm" style="margin-top:12px">${fld('收款方式', `<select class="ipt"><option>微信</option><option>支付宝</option><option>现金</option><option>挂账（协议单位）</option></select>`, true)}</div>`,
-    footer:`<button class="btn" onclick="UI.close()">取消</button><button class="btn pri" onclick="UI.close();UI.toast('结账完成：房态转脏房，已通知清扫')">收款并退房</button>`});
+    footer:`<button class="btn" onclick="UI.close()">取消</button><button class="btn pri" onclick="UI.close();UI.toast('结账完成：房态转脏房，已推送清扫任务至客房管理端小程序')">收款并退房</button>`});
 };
 PC.reg('/estate/酒店/rate','酒店房价方案', (el)=>{
   el.innerHTML = `
@@ -538,6 +555,7 @@ PC.rateEdit = function(){
     ${fld('日租价（元/晚）', `<input class="ipt" type="number" value="228">`)}
     ${fld('周末价（元/晚）', `<input class="ipt" type="number" value="258">`)}
     ${fld('钟点价', `<input class="ipt" value="68 元/4小时">`)}
+    ${fld('钟点超时规则', `<select class="ipt"><option>超时按 ¥17/小时加收（房价的 1/4）</option><option>超时不足 1 小时按 1 小时计</option><option>超时满 4 小时自动转日租价</option></select>`)}
     ${fld('长租价（元/月）', `<input class="ipt" value="3600">`)}
     ${fld('会员折扣', `<input class="ipt" value="9 折">`)}
   </div>`, footer:`<button class="btn" onclick="UI.close()">取消</button><button class="btn pri" onclick="UI.close();UI.toast('房价方案已保存')">保存</button>`});
